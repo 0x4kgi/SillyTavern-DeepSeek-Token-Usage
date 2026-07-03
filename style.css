@@ -1,0 +1,22 @@
+.ds-token-usage-display {
+    .container {
+        margin: 0 auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 1.5rem;
+        text-align: left;
+    }
+
+    th {
+        text-align: center;
+    }
+
+    td {
+        font-family: monospace;
+        text-align: center;
+        border-bottom: 1px solid #e2e8f0;
+    }
+}

@@ -1,0 +1,11 @@
+{
+    "display_name": "DeepSeek Token Usage (Last gen only)",
+    "loading_order": 999,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "0x4kgi",
+    "version": "0.0.1",
+    "homePage": "https://github.com/0x4kgi/SillyTavern-DeepSeek-Token-Usage"
+}
