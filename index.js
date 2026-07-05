@@ -62,6 +62,10 @@ async function handleStream(stream) {
     }
 }
 
+function panelElemId(id) {
+    return document.getElementById("ds-token--" + id);
+}
+
 function processUsageData(usage) {
     if (!usage) return;
 
@@ -79,17 +83,17 @@ function processUsageData(usage) {
     const ratio = promptTokens > 0 ? (cacheHit / promptTokens) * 100 : 0;
     const ratioFormatted = `${ratio.toFixed(1)}%`;
 
-    document.getElementById('prompt_tokens').textContent = promptTokens;
-    document.getElementById('completion_tokens').textContent = completionTokens;
-    document.getElementById('total_tokens').textContent = totalTokens;
+    panelElemId('prompt_tokens').textContent = promptTokens;
+    panelElemId('completion_tokens').textContent = completionTokens;
+    panelElemId('total_tokens').textContent = totalTokens;
 
-    document.getElementById('cached_tokens').textContent = cachedTokens;
-    document.getElementById('reasoning_tokens').textContent = reasoningTokens;
-    document.getElementById('response_tokens').textContent = responseTokens;
+    // panelElemId('cached_tokens').textContent = cachedTokens;
+    panelElemId('reasoning_tokens').textContent = reasoningTokens;
+    panelElemId('response_tokens').textContent = responseTokens;
 
-    document.getElementById('prompt_cache_hit_tokens').textContent = cacheHit;
-    document.getElementById('prompt_cache_miss_tokens').textContent = cacheMiss;
-    document.getElementById('cache_ratio').textContent = ratioFormatted;
+    panelElemId('prompt_cache_hit_tokens').textContent = cacheHit;
+    panelElemId('prompt_cache_miss_tokens').textContent = cacheMiss;
+    panelElemId('cache_ratio').textContent = ratioFormatted;
 }
 
 jQuery(async () => {
