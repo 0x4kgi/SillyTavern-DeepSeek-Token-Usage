@@ -1,6 +1,58 @@
 const extensionName = "SillyTavern-DeepSeek-Token-Usage";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 
+// Should be editable.
+// But since this ext is for personal use...
+// eh.
+const DEEPSEEK_COST = {
+    "deepseek-v4-flash": {
+        in: 0.14,
+        cached: 0.0028,
+        out: 0.28,
+    },
+    "deepseek-v4-pro": {
+        in: 0.435,
+        cached: 0.003625,
+        out: 0.87,
+    },
+    // depreciated models.
+    // remove after july 27?
+    "deepseek-chat": {
+        in: 0.14,
+        cached: 0.0028,
+        out: 0.28,
+    },
+    "deepseek-reasoner": {
+        in: 0.14,
+        cached: 0.0028,
+        out: 0.28,
+    },
+};
+
+// Might be useful in the future, so we are storing it "globally"
+// Will change everytime a gen occurs.
+// Not sure what to feel about it, for now.
+let modelName;
+let completionSource;
+
+// Ephemeral tracking
+// Will reset at page refresh. INTENTIONAL.
+let sessionUsage = {
+    promptTotal: 0,
+    cacheHitTotal: 0,
+    cacheMissTotal: 0,
+    completionTotal: 0,
+    reasoningTotal: 0,
+    responseTotal: 0,
+
+    promptCostTotal: 0.0,
+    cacheHitCostTotal: 0.0,
+    cacheMissCostTotal: 0.0,
+    completionCostTotal: 0.0,
+
+    ratio: 0.0,
+};
+
 function log(...args) {
     console.log(`[${extensionName}]`, ...args);
 }
@@ -12,11 +64,21 @@ function overrideFetch() {
     const originalFetch = window.fetch;
     window.fetch = async function (...args) {
         const url = args[0];
+        const requestBody = args[1];
         if (typeof url === 'string' && url.includes('/api/backends/chat-completions/generate')) {
             try {
                 const response = await originalFetch.apply(this, args);
                 const clonedResponse = response.clone();
-                handleStream(clonedResponse.body);
+
+                const requestJson = JSON.parse(requestBody?.body);
+                modelName = requestJson.model || null;
+                completionSource = requestJson.chat_completion_source || null;
+
+                // since this is only useful for deepseek for now...
+                if (completionSource === "deepseek") {
+                    handleStream(clonedResponse.body);
+                }
+
                 return response;
             } catch (error) {
                 console.error("Error intercepting fetch:", error);
@@ -66,34 +128,96 @@ function panelElemId(id) {
     return document.getElementById("ds-token--" + id);
 }
 
+function parseUsageObject(usage) {
+    const obj = {
+        prompt: usage.prompt_tokens || 0,
+        completion: usage.completion_tokens || 0,
+        total: usage.total_tokens || 0,
+        reasoning: usage.completion_tokens_details?.reasoning_tokens || 0,
+        response: 0,
+        cacheHit: usage.prompt_cache_hit_tokens || 0,
+        cacheMiss: usage.prompt_cache_miss_tokens || 0,
+        ratio: 0,
+    }
+    obj.response = obj.completion - obj.reasoning;
+    obj.ratio = obj.prompt > 0 ? (obj.cacheHit / obj.prompt) * 100 : 0;
+
+    return obj;
+}
+
+function calculateTokenCost(tokens) {
+    const tokenPrice = DEEPSEEK_COST[modelName];
+    const cacheHitCost = tokenPrice.cached / 1_000_000;
+    const cacheMissCost = tokenPrice.in / 1_000_000;
+    const outputCost = tokenPrice.out / 1_000_000;
+
+    const obj = {
+        prompt: 0,
+        cacheHit: tokens.cacheHit * cacheHitCost,
+        cacheMiss: tokens.cacheMiss * cacheMissCost,
+        completion: tokens.completion * outputCost,
+        reasoning: tokens.reasoning * outputCost,
+        response: tokens.response * outputCost,
+    };
+    obj.prompt = obj.cacheHit + obj.cacheMiss;
+
+    return obj;
+}
+
+function totalUsage(tokens, cost) {
+    sessionUsage.promptTotal += tokens.prompt;
+    sessionUsage.cacheHitTotal += tokens.cacheHit;
+    sessionUsage.cacheMissTotal += tokens.cacheMiss;
+    sessionUsage.completionTotal += tokens.completion;
+    sessionUsage.reasoningTotal += tokens.reasoning;
+    sessionUsage.responseTotal += tokens.response;
+
+    sessionUsage.promptCostTotal += cost.prompt;
+    sessionUsage.cacheHitCostTotal += cost.cacheHit;
+    sessionUsage.cacheMissCostTotal += cost.cacheMiss;
+    sessionUsage.completionCostTotal += cost.completion;
+
+    sessionUsage.ratio = sessionUsage.promptTotal > 0 ?
+        (sessionUsage.cacheHitTotal / sessionUsage.promptTotal) * 100
+        : 0;
+}
+
+// God, this fucntion looks so ass :sob:
 function processUsageData(usage) {
     if (!usage) return;
 
-    const promptTokens = usage.prompt_tokens || 0;
-    const completionTokens = usage.completion_tokens || 0;
-    const totalTokens = usage.total_tokens || 0;
+    const tokens = parseUsageObject(usage);
+    const tokenCost = calculateTokenCost(tokens);
+    totalUsage(tokens, tokenCost);
 
-    const cachedTokens = usage.prompt_tokens_details?.cached_tokens || 0;
-    const reasoningTokens = usage.completion_tokens_details?.reasoning_tokens || 0;
+    // Last Message
+    panelElemId('prompt_tokens').textContent = tokens.prompt;
+    panelElemId('completion_tokens').textContent = tokens.completion;
+    panelElemId('total_tokens').textContent = tokens.total;
 
-    const cacheHit = usage.prompt_cache_hit_tokens || 0;
-    const cacheMiss = usage.prompt_cache_miss_tokens || 0;
+    panelElemId('reasoning_tokens').textContent = tokens.reasoning;
+    panelElemId('response_tokens').textContent = tokens.response;
 
-    const responseTokens = completionTokens - reasoningTokens;
-    const ratio = promptTokens > 0 ? (cacheHit / promptTokens) * 100 : 0;
-    const ratioFormatted = `${ratio.toFixed(1)}%`;
+    panelElemId('prompt_cache_hit_tokens').textContent = tokens.cacheHit;
+    panelElemId('prompt_cache_miss_tokens').textContent = tokens.cacheMiss;
+    panelElemId('cache_ratio').textContent = `${tokens.ratio.toFixed(1)}%`;
 
-    panelElemId('prompt_tokens').textContent = promptTokens;
-    panelElemId('completion_tokens').textContent = completionTokens;
-    panelElemId('total_tokens').textContent = totalTokens;
+    // Session
+    panelElemId('session_prompt_tokens').textContent = sessionUsage.promptTotal;
+    panelElemId('session_completion_tokens').textContent = sessionUsage.completionTotal;
+    panelElemId('session_total_tokens').textContent = sessionUsage.promptTotal + sessionUsage.completionTotal;
 
-    // panelElemId('cached_tokens').textContent = cachedTokens;
-    panelElemId('reasoning_tokens').textContent = reasoningTokens;
-    panelElemId('response_tokens').textContent = responseTokens;
+    const sessionTotalCost = sessionUsage.promptCostTotal + sessionUsage.completionCostTotal;
+    panelElemId('session_prompt_cost').textContent = `${sessionUsage.promptCostTotal.toFixed(5)}`;
+    panelElemId('session_completion_cost').textContent = `${sessionUsage.completionCostTotal.toFixed(5)}`;
+    panelElemId('session_total_cost').textContent = `${sessionTotalCost.toFixed(5)}`;
 
-    panelElemId('prompt_cache_hit_tokens').textContent = cacheHit;
-    panelElemId('prompt_cache_miss_tokens').textContent = cacheMiss;
-    panelElemId('cache_ratio').textContent = ratioFormatted;
+    panelElemId('session_reasoning_tokens').textContent = sessionUsage.reasoningTotal;
+    panelElemId('session_response_tokens').textContent = sessionUsage.responseTotal;
+
+    panelElemId('session_prompt_cache_hit_tokens').textContent = sessionUsage.cacheHitTotal;
+    panelElemId('session_prompt_cache_miss_tokens').textContent = sessionUsage.cacheMissTotal;
+    panelElemId('session_cache_ratio').textContent = `${sessionUsage.ratio.toFixed(1)}%`;
 }
 
 jQuery(async () => {

@@ -1,7 +1,7 @@
 <div class="ds-token-usage-display">
     <div class="inline-drawer">
         <div class="inline-drawer-toggle inline-drawer-header">
-            <b>Token Count (Prev response)</b>
+            <b>DeepSeek Token Usage</b>
             <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
         </div>
         <div class="inline-drawer-content">
@@ -10,6 +10,7 @@
                 <table>
                     <thead>
                         <tr>
+                            <th></th>
                             <th>Prompt</th>
                             <th>Completion</th>
                             <th>Total</th>
@@ -17,9 +18,22 @@
                     </thead>
                     <tbody>
                         <tr>
+                            <td>Last</td>
                             <td id="ds-token--prompt_tokens">-</td>
                             <td id="ds-token--completion_tokens">-</td>
                             <td id="ds-token--total_tokens">-</td>
+                        </tr>
+                        <tr>
+                            <td>Session</td>
+                            <td id="ds-token--session_prompt_tokens">-</td>
+                            <td id="ds-token--session_completion_tokens">-</td>
+                            <td id="ds-token--session_total_tokens">-</td>
+                        </tr>
+                        <tr>
+                            <td>Cost</td>
+                            <td id="ds-token--session_prompt_cost">-</td>
+                            <td id="ds-token--session_completion_cost">-</td>
+                            <td id="ds-token--session_total_cost">-</td>
                         </tr>
                     </tbody>
                 </table>
@@ -28,14 +42,21 @@
                 <table>
                     <thead>
                         <tr>
+                            <th></th>
                             <th>Reasoning</th>
                             <th>Response</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
+                            <td>Last</td>
                             <td id="ds-token--reasoning_tokens">-</td>
                             <td id="ds-token--response_tokens">-</td>
+                        </tr>
+                        <tr>
+                            <td>Session</td>
+                            <td id="ds-token--session_reasoning_tokens">-</td>
+                            <td id="ds-token--session_response_tokens">-</td>
                         </tr>
                     </tbody>
                 </table>
@@ -44,6 +65,7 @@
                 <table>
                     <thead>
                         <tr>
+                            <th></th>
                             <th>Hit</th>
                             <th>Miss</th>
                             <th>Ratio</th>
@@ -51,13 +73,21 @@
                     </thead>
                     <tbody>
                         <tr>
+                            <td>Last</td>
                             <td id="ds-token--prompt_cache_hit_tokens">-</td>
                             <td id="ds-token--prompt_cache_miss_tokens">-</td>
                             <td id="ds-token--cache_ratio">-</td>
                         </tr>
+                        <tr>
+                            <td>Session</td>
+                            <td id="ds-token--session_prompt_cache_hit_tokens">-</td>
+                            <td id="ds-token--session_prompt_cache_miss_tokens">-</td>
+                            <td id="ds-token--session_cache_ratio">-</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
+            <hr>
         </div>
     </div>
 </div>
