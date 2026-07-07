@@ -65,26 +65,30 @@ function overrideFetch() {
     window.fetch = async function (...args) {
         const url = args[0];
         const requestBody = args[1];
-        if (typeof url === 'string' && url.includes('/api/backends/chat-completions/generate')) {
-            try {
-                const response = await originalFetch.apply(this, args);
-                const clonedResponse = response.clone();
 
-                const requestJson = JSON.parse(requestBody?.body);
-                modelName = requestJson.model || null;
-                completionSource = requestJson.chat_completion_source || null;
-
-                // since this is only useful for deepseek for now...
-                if (completionSource === "deepseek") {
-                    handleStream(clonedResponse.body);
-                }
-
-                return response;
-            } catch (error) {
-                console.error("Error intercepting fetch:", error);
-            }
+        const isGenerateUrl = typeof url === 'string'
+            && url.includes('/api/backends/chat-completions/generate');
+        if (!isGenerateUrl) {
+            return originalFetch.apply(this, args);
         }
-        return originalFetch.apply(this, args);
+
+        try {
+            const response = await originalFetch.apply(this, args);
+            const clonedResponse = response.clone();
+
+            const requestJson = JSON.parse(requestBody?.body);
+            modelName = requestJson.model || null;
+            completionSource = requestJson.chat_completion_source || null;
+
+            // since this is only useful for deepseek for now...
+            if (completionSource === "deepseek") {
+                handleStream(clonedResponse.body);
+            }
+
+            return response;
+        } catch (error) {
+            console.error("Error intercepting fetch:", error);
+        }
     };
 }
 
@@ -104,24 +108,28 @@ async function handleStream(stream) {
             buffer = lines.pop();
 
             for (const line of lines) {
-                const trimmed = line.trim();
-                if (trimmed.startsWith("data:")) {
-                    const jsonString = trimmed.replace(/^data:\s*/, "");
-
-                    if (jsonString === "[DONE]" || !jsonString) continue;
-                    try {
-                        const parsed = JSON.parse(jsonString);
-                        if (parsed && parsed.usage) {
-                            log("Found Usage Data:", parsed.usage);
-                            processUsageData(parsed.usage);
-                        }
-                    } catch (_) { }
-                }
+                handleStreamLine(line);
             }
         }
     } catch (err) {
         console.error("Error reading stream:", err);
     }
+}
+
+function handleStreamLine(line) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("data:")) continue;
+
+    const jsonString = trimmed.replace(/^data:\s*/, "");
+    if (jsonString === "[DONE]" || !jsonString) continue;
+
+    try {
+        const parsed = JSON.parse(jsonString);
+        if (parsed && parsed.usage) {
+            log("Found Usage Data:", parsed.usage);
+            processUsageData(parsed.usage);
+        }
+    } catch (_) { }
 }
 
 function panelElemId(id) {
