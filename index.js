@@ -118,10 +118,10 @@ async function handleStream(stream) {
 
 function handleStreamLine(line) {
     const trimmed = line.trim();
-    if (!trimmed.startsWith("data:")) continue;
+    if (!trimmed.startsWith("data:")) return;
 
     const jsonString = trimmed.replace(/^data:\s*/, "");
-    if (jsonString === "[DONE]" || !jsonString) continue;
+    if (jsonString === "[DONE]" || !jsonString) return;
 
     try {
         const parsed = JSON.parse(jsonString);
