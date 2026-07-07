@@ -38,17 +38,17 @@ let completionSource;
 // Ephemeral tracking
 // Will reset at page refresh. INTENTIONAL.
 let sessionUsage = {
-    promptTotal: 0,
-    cacheHitTotal: 0,
-    cacheMissTotal: 0,
-    completionTotal: 0,
-    reasoningTotal: 0,
-    responseTotal: 0,
+    prompt: 0,
+    cacheHit: 0,
+    cacheMiss: 0,
+    completion: 0,
+    reasoning: 0,
+    response: 0,
 
-    promptCostTotal: 0.0,
-    cacheHitCostTotal: 0.0,
-    cacheMissCostTotal: 0.0,
-    completionCostTotal: 0.0,
+    promptCost: 0.0,
+    cacheHitCost: 0.0,
+    cacheMissCost: 0.0,
+    completionCost: 0.0,
 
     ratio: 0.0,
 };
@@ -172,21 +172,21 @@ function calculateTokenCost(tokens) {
     return obj;
 }
 
-function totalUsage(tokens, cost) {
-    sessionUsage.promptTotal += tokens.prompt;
-    sessionUsage.cacheHitTotal += tokens.cacheHit;
-    sessionUsage.cacheMissTotal += tokens.cacheMiss;
-    sessionUsage.completionTotal += tokens.completion;
-    sessionUsage.reasoningTotal += tokens.reasoning;
-    sessionUsage.responseTotal += tokens.response;
+function saveSessionUsage(tokens, cost) {
+    sessionUsage.prompt += tokens.prompt;
+    sessionUsage.cacheHit += tokens.cacheHit;
+    sessionUsage.cacheMiss += tokens.cacheMiss;
+    sessionUsage.completion += tokens.completion;
+    sessionUsage.reasoning += tokens.reasoning;
+    sessionUsage.response += tokens.response;
 
-    sessionUsage.promptCostTotal += cost.prompt;
-    sessionUsage.cacheHitCostTotal += cost.cacheHit;
-    sessionUsage.cacheMissCostTotal += cost.cacheMiss;
-    sessionUsage.completionCostTotal += cost.completion;
+    sessionUsage.promptCost += cost.prompt;
+    sessionUsage.cacheHitCost += cost.cacheHit;
+    sessionUsage.cacheMissCost += cost.cacheMiss;
+    sessionUsage.completionCost += cost.completion;
 
-    sessionUsage.ratio = sessionUsage.promptTotal > 0 ?
-        (sessionUsage.cacheHitTotal / sessionUsage.promptTotal) * 100
+    sessionUsage.ratio = sessionUsage.prompt > 0 ?
+        (sessionUsage.cacheHit / sessionUsage.prompt) * 100
         : 0;
 }
 
@@ -196,7 +196,7 @@ function processUsageData(usage) {
 
     const tokens = parseUsageObject(usage);
     const tokenCost = calculateTokenCost(tokens);
-    totalUsage(tokens, tokenCost);
+    saveSessionUsage(tokens, tokenCost);
 
     // Last Message
     panelElemId('prompt_tokens').textContent = tokens.prompt;
@@ -211,20 +211,20 @@ function processUsageData(usage) {
     panelElemId('cache_ratio').textContent = `${tokens.ratio.toFixed(1)}%`;
 
     // Session
-    panelElemId('session_prompt_tokens').textContent = sessionUsage.promptTotal;
-    panelElemId('session_completion_tokens').textContent = sessionUsage.completionTotal;
-    panelElemId('session_total_tokens').textContent = sessionUsage.promptTotal + sessionUsage.completionTotal;
+    panelElemId('session_prompt_tokens').textContent = sessionUsage.prompt;
+    panelElemId('session_completion_tokens').textContent = sessionUsage.completion;
+    panelElemId('session_total_tokens').textContent = sessionUsage.prompt + sessionUsage.completion;
 
-    const sessionTotalCost = sessionUsage.promptCostTotal + sessionUsage.completionCostTotal;
-    panelElemId('session_prompt_cost').textContent = `${sessionUsage.promptCostTotal.toFixed(5)}`;
-    panelElemId('session_completion_cost').textContent = `${sessionUsage.completionCostTotal.toFixed(5)}`;
+    const sessionTotalCost = sessionUsage.promptCost + sessionUsage.completionCost;
+    panelElemId('session_prompt_cost').textContent = `${sessionUsage.promptCost.toFixed(5)}`;
+    panelElemId('session_completion_cost').textContent = `${sessionUsage.completionCost.toFixed(5)}`;
     panelElemId('session_total_cost').textContent = `${sessionTotalCost.toFixed(5)}`;
 
-    panelElemId('session_reasoning_tokens').textContent = sessionUsage.reasoningTotal;
-    panelElemId('session_response_tokens').textContent = sessionUsage.responseTotal;
+    panelElemId('session_reasoning_tokens').textContent = sessionUsage.reasoning;
+    panelElemId('session_response_tokens').textContent = sessionUsage.response;
 
-    panelElemId('session_prompt_cache_hit_tokens').textContent = sessionUsage.cacheHitTotal;
-    panelElemId('session_prompt_cache_miss_tokens').textContent = sessionUsage.cacheMissTotal;
+    panelElemId('session_prompt_cache_hit_tokens').textContent = sessionUsage.cacheHit;
+    panelElemId('session_prompt_cache_miss_tokens').textContent = sessionUsage.cacheMiss;
     panelElemId('session_cache_ratio').textContent = `${sessionUsage.ratio.toFixed(1)}%`;
 }
 
