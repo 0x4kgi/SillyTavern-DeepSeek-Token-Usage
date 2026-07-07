@@ -132,10 +132,6 @@ function handleStreamLine(line) {
     } catch (_) { }
 }
 
-function panelElemId(id) {
-    return document.getElementById("ds-token--" + id);
-}
-
 function parseUsageObject(usage) {
     const obj = {
         prompt: usage.prompt_tokens || 0,
@@ -188,6 +184,10 @@ function saveSessionUsage(tokens, cost) {
     sessionUsage.ratio = sessionUsage.prompt > 0 ?
         (sessionUsage.cacheHit / sessionUsage.prompt) * 100
         : 0;
+}
+
+function panelElemId(id) {
+    return document.getElementById("ds-token--" + id);
 }
 
 // God, this fucntion looks so ass :sob:
