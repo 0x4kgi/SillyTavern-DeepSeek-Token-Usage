@@ -1,31 +1,47 @@
 .ds-token-usage-display {
     .container {
-        margin: 0 auto;
-        padding: 0px 25px;
+        max-width: 350px;
+        margin: auto;
     }
 
-    table {
+    fieldset {
+        border: 1px solid black;
+        border-radius: 5px;
+        padding: 10px;
+    }
+
+    legend {
+        font-weight: bolder;
+    }
+
+    legend small {
+        font-weight: normal;
+        font-style: italic;
+    }
+
+    .row {
+        display: flex;
+        flex-direction: row;
+    }
+
+    .row.center {
+        text-align: center;
+    }
+
+    .row .item {
+        flex-grow: 1;
+    }
+
+    .row progress {
         width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 1.5rem;
-        text-align: left;
     }
 
-    th {
-        text-align: center;
+    .grid {
+        display: grid;
+        grid: auto auto / auto auto;
     }
 
-    tbody td {
-        font-family: monospace;
-        text-align: center;
-    }
-
-    tbody td:first-child {
-        font-family: unset;
-        font-weight: bold;
-    }
-
-    tbody tr:last-child {
-        border-bottom: 1px solid #e2e8f0;
+    .item span {
+        font-weight: bolder;
     }
 }

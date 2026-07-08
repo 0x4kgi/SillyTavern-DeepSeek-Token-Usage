@@ -55,6 +55,7 @@ let sessionUsage = {
     totalCost: 0.0,
 
     ratio: 0.0,
+    requestCount: 0,
 };
 
 function log(...args) {
@@ -181,6 +182,7 @@ function saveSessionUsage(tokens, cost) {
     sessionUsage.completion += tokens.completion;
     sessionUsage.reasoning += tokens.reasoning;
     sessionUsage.response += tokens.response;
+    sessionUsage.total += tokens.total;
 
     sessionUsage.promptCost += cost.prompt;
     sessionUsage.cacheHitCost += cost.cacheHit;
@@ -193,6 +195,7 @@ function saveSessionUsage(tokens, cost) {
     sessionUsage.ratio = sessionUsage.prompt > 0 ?
         (sessionUsage.cacheHit / sessionUsage.prompt) * 100
         : 0;
+    sessionUsage.requestCount += 1;
 }
 
 function panelElemId(id) {
@@ -222,21 +225,20 @@ function processUsageData(usage) {
     panelElemText('prompt', tokens.prompt);
     panelElemText('completion', tokens.completion);
     panelElemText('total', tokens.total);
+    panelElemText('totalCost', tokenCost.total.toFixed(5));
 
     panelElemText('reasoning', tokens.reasoning);
     panelElemText('response', tokens.response);
 
     panelElemText('cacheHit', tokens.cacheHit);
     panelElemText('cacheMiss', tokens.cacheMiss);
-    panelElemText('ratio', `${tokens.ratio.toFixed(1)}%`);
+    panelElemId('ratio').value = tokens.ratio;
+    panelElemText('model', modelName);
 
     // Session
     panelElemText('session_prompt', sessionUsage.prompt);
     panelElemText('session_completion', sessionUsage.completion);
     panelElemText('session_total', sessionUsage.total);
-
-    panelElemText('session_promptCost', `${sessionUsage.promptCost.toFixed(5)}`);
-    panelElemText('session_completionCost', `${sessionUsage.completionCost.toFixed(5)}`);
     panelElemText('session_totalCost', `${sessionUsage.totalCost.toFixed(5)}`);
 
     panelElemText('session_reasoning', sessionUsage.reasoning);
@@ -244,13 +246,15 @@ function processUsageData(usage) {
 
     panelElemText('session_cacheHit', sessionUsage.cacheHit);
     panelElemText('session_cacheMiss', sessionUsage.cacheMiss);
-    panelElemText('session_ratio', `${sessionUsage.ratio.toFixed(1)}%`);
+    panelElemId('session_ratio').value = sessionUsage.ratio;
+    panelElemText('session_requestCount', sessionUsage.requestCount);
 }
 
 jQuery(async () => {
     log("Loaded.");
 
-    const panelHtml = await $.get(`${extensionFolderPath}/panel.html`);
+    let panelHtml = await $.get(`${extensionFolderPath}/panel.html`);
+    panelHtml = panelHtml.replaceAll('id="', 'id="ds-token--'); // bad idea?
     $("#extensions_settings2").append(panelHtml);
 
     overrideFetch();

@@ -6,86 +6,48 @@
         </div>
         <div class="inline-drawer-content">
             <div class="container">
-                <h3>All</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th></th>
-                            <th>Prompt</th>
-                            <th>Completion</th>
-                            <th>Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Last</td>
-                            <td id="ds-token--prompt">-</td>
-                            <td id="ds-token--completion">-</td>
-                            <td id="ds-token--total">-</td>
-                        </tr>
-                        <tr>
-                            <td>Session</td>
-                            <td id="ds-token--session_prompt">-</td>
-                            <td id="ds-token--session_completion">-</td>
-                            <td id="ds-token--session_total">-</td>
-                        </tr>
-                        <tr>
-                            <td>Cost</td>
-                            <td id="ds-token--session_promptCost">-</td>
-                            <td id="ds-token--session_completionCost">-</td>
-                            <td id="ds-token--session_totalCost">-</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <fieldset>
+                    <legend>Last Request <small>of <span id="model">deepseek-*</span></small></legend>
+                    <div class="row center">
+                        <div class="item">$<span id="totalCost">0.00</span></div>
+                        <div class="item"><span id="total">0</span> tokens</div>
+                        <div class="item">
+                            (<span id="prompt">0</span> / <span id="completion">0</span>)
+                        </div>
+                    </div>
+                    <div class="row">
+                        <progress id="ratio" value="0" max="100"></progress>
+                    </div>
+                    <div class="grid">
+                        <div class="item">Cache Hit: <span id="cacheHit">0</span></div>
+                        <div class="item">Reasoning: <span id="reasoning">0</span></div>
+                        <div class="item">Cache Miss: <span id="cacheMiss">0</span></div>
+                        <div class="item">Response: <span id="response">0</span></div>
+                    </div>
 
-                <h3>Completion</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th></th>
-                            <th>Reasoning</th>
-                            <th>Response</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Last</td>
-                            <td id="ds-token--reasoning">-</td>
-                            <td id="ds-token--response">-</td>
-                        </tr>
-                        <tr>
-                            <td>Session</td>
-                            <td id="ds-token--session_reasoning">-</td>
-                            <td id="ds-token--session_response">-</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <h3>Cached</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th></th>
-                            <th>Hit</th>
-                            <th>Miss</th>
-                            <th>Ratio</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Last</td>
-                            <td id="ds-token--cacheHit">-</td>
-                            <td id="ds-token--cacheMiss">-</td>
-                            <td id="ds-token--ratio">-</td>
-                        </tr>
-                        <tr>
-                            <td>Session</td>
-                            <td id="ds-token--session_cacheHit">-</td>
-                            <td id="ds-token--session_cacheMiss">-</td>
-                            <td id="ds-token--session_ratio">-</td>
-                        </tr>
-                    </tbody>
-                </table>
+                </fieldset>
+                <fieldset>
+                    <legend>Session <small>of <span id="session_requestCount">0</span> requests</small></legend>
+                    <div class="row center">
+                        <div class="item">$<span id="session_totalCost">0.00</span></div>
+                        <div class="item"><span id="session_total">0</span> tokens</div>
+                        <div class="item">
+                            (<span id="session_prompt">0</span> / <span id="session_completion">0</span>)
+                        </div>
+                    </div>
+                    <div class="row">
+                        <progress id="session_ratio" value="0" max="100"></progress>
+                    </div>
+                    <div class="grid">
+                        <div class="item">Cache Hit: <span id="session_cacheHit">0</span></div>
+                        <div class="item">Reasoning: <span id="session_reasoning">0</span></div>
+                        <div class="item">Cache Miss: <span id="session_cacheMiss">0</span></div>
+                        <div class="item">Response: <span id="session_response">0</span></div>
+                    </div>
+                    <div class="row center">
+                        <small><sub>Only tracking the current session! Resets at tab refresh/close.</sup></small>
+                    </div>
+                </fieldset>
             </div>
             <hr>
         </div>
