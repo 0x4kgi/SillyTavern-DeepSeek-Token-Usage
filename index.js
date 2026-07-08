@@ -190,6 +190,17 @@ function panelElemId(id) {
     return document.getElementById("ds-token--" + id);
 }
 
+function panelElemText(id, content) {
+    const elem = panelElemId(id);
+
+    if (!elem) {
+        console.error(`[${extensionName}]`, `Element not found: #ds-token--${id}`);
+        return;
+    }
+
+    elem.textContent = content;
+}
+
 // God, this fucntion looks so ass :sob:
 function processUsageData(usage) {
     if (!usage) return;
@@ -199,33 +210,33 @@ function processUsageData(usage) {
     saveSessionUsage(tokens, tokenCost);
 
     // Last Message
-    panelElemId('prompt_tokens').textContent = tokens.prompt;
-    panelElemId('completion_tokens').textContent = tokens.completion;
-    panelElemId('total_tokens').textContent = tokens.total;
+    panelElemText('prompt_tokens', tokens.prompt);
+    panelElemText('completion_tokens', tokens.completion);
+    panelElemText('total_tokens', tokens.total);
 
-    panelElemId('reasoning_tokens').textContent = tokens.reasoning;
-    panelElemId('response_tokens').textContent = tokens.response;
+    panelElemText('reasoning_tokens', tokens.reasoning);
+    panelElemText('response_tokens', tokens.response);
 
-    panelElemId('prompt_cache_hit_tokens').textContent = tokens.cacheHit;
-    panelElemId('prompt_cache_miss_tokens').textContent = tokens.cacheMiss;
-    panelElemId('cache_ratio').textContent = `${tokens.ratio.toFixed(1)}%`;
+    panelElemText('prompt_cache_hit_tokens', tokens.cacheHit);
+    panelElemText('prompt_cache_miss_tokens', tokens.cacheMiss);
+    panelElemText('cache_ratio', `${tokens.ratio.toFixed(1)}%`);
 
     // Session
-    panelElemId('session_prompt_tokens').textContent = sessionUsage.prompt;
-    panelElemId('session_completion_tokens').textContent = sessionUsage.completion;
-    panelElemId('session_total_tokens').textContent = sessionUsage.prompt + sessionUsage.completion;
+    panelElemText('session_prompt_tokens', sessionUsage.prompt);
+    panelElemText('session_completion_tokens', sessionUsage.completion);
+    panelElemText('session_total_tokens', sessionUsage.prompt + sessionUsage.completion);
 
     const sessionTotalCost = sessionUsage.promptCost + sessionUsage.completionCost;
-    panelElemId('session_prompt_cost').textContent = `${sessionUsage.promptCost.toFixed(5)}`;
-    panelElemId('session_completion_cost').textContent = `${sessionUsage.completionCost.toFixed(5)}`;
-    panelElemId('session_total_cost').textContent = `${sessionTotalCost.toFixed(5)}`;
+    panelElemText('session_prompt_cost', `${sessionUsage.promptCost.toFixed(5)}`);
+    panelElemText('session_completion_cost', `${sessionUsage.completionCost.toFixed(5)}`);
+    panelElemText('session_total_cost', `${sessionTotalCost.toFixed(5)}`);
 
-    panelElemId('session_reasoning_tokens').textContent = sessionUsage.reasoning;
-    panelElemId('session_response_tokens').textContent = sessionUsage.response;
+    panelElemText('session_reasoning_tokens', sessionUsage.reasoning);
+    panelElemText('session_response_tokens', sessionUsage.response);
 
-    panelElemId('session_prompt_cache_hit_tokens').textContent = sessionUsage.cacheHit;
-    panelElemId('session_prompt_cache_miss_tokens').textContent = sessionUsage.cacheMiss;
-    panelElemId('session_cache_ratio').textContent = `${sessionUsage.ratio.toFixed(1)}%`;
+    panelElemText('session_prompt_cache_hit_tokens', sessionUsage.cacheHit);
+    panelElemText('session_prompt_cache_miss_tokens', sessionUsage.cacheMiss);
+    panelElemText('session_cache_ratio', `${sessionUsage.ratio.toFixed(1)}%`);
 }
 
 jQuery(async () => {
