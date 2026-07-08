@@ -44,11 +44,15 @@ let sessionUsage = {
     completion: 0,
     reasoning: 0,
     response: 0,
+    total: 0,
 
     promptCost: 0.0,
     cacheHitCost: 0.0,
     cacheMissCost: 0.0,
     completionCost: 0.0,
+    reasoningCost: 0.0,
+    responseCost: 0.0,
+    totalCost: 0.0,
 
     ratio: 0.0,
 };
@@ -162,8 +166,10 @@ function calculateTokenCost(tokens) {
         completion: tokens.completion * outputCost,
         reasoning: tokens.reasoning * outputCost,
         response: tokens.response * outputCost,
+        total: 0,
     };
     obj.prompt = obj.cacheHit + obj.cacheMiss;
+    obj.total = obj.prompt + obj.completion;
 
     return obj;
 }
@@ -180,6 +186,9 @@ function saveSessionUsage(tokens, cost) {
     sessionUsage.cacheHitCost += cost.cacheHit;
     sessionUsage.cacheMissCost += cost.cacheMiss;
     sessionUsage.completionCost += cost.completion;
+    sessionUsage.reasoningCost += cost.reasoning;
+    sessionUsage.responseCost += cost.response;
+    sessionUsage.totalCost += cost.total;
 
     sessionUsage.ratio = sessionUsage.prompt > 0 ?
         (sessionUsage.cacheHit / sessionUsage.prompt) * 100
@@ -194,7 +203,7 @@ function panelElemText(id, content) {
     const elem = panelElemId(id);
 
     if (!elem) {
-        console.error(`[${extensionName}]`, `Element not found: #ds-token--${id}`);
+        console.warn(`[${extensionName}]`, `Element not found: #ds-token--${id}`);
         return;
     }
 
@@ -210,33 +219,32 @@ function processUsageData(usage) {
     saveSessionUsage(tokens, tokenCost);
 
     // Last Message
-    panelElemText('prompt_tokens', tokens.prompt);
-    panelElemText('completion_tokens', tokens.completion);
-    panelElemText('total_tokens', tokens.total);
+    panelElemText('prompt', tokens.prompt);
+    panelElemText('completion', tokens.completion);
+    panelElemText('total', tokens.total);
 
-    panelElemText('reasoning_tokens', tokens.reasoning);
-    panelElemText('response_tokens', tokens.response);
+    panelElemText('reasoning', tokens.reasoning);
+    panelElemText('response', tokens.response);
 
-    panelElemText('prompt_cache_hit_tokens', tokens.cacheHit);
-    panelElemText('prompt_cache_miss_tokens', tokens.cacheMiss);
-    panelElemText('cache_ratio', `${tokens.ratio.toFixed(1)}%`);
+    panelElemText('cacheHit', tokens.cacheHit);
+    panelElemText('cacheMiss', tokens.cacheMiss);
+    panelElemText('ratio', `${tokens.ratio.toFixed(1)}%`);
 
     // Session
-    panelElemText('session_prompt_tokens', sessionUsage.prompt);
-    panelElemText('session_completion_tokens', sessionUsage.completion);
-    panelElemText('session_total_tokens', sessionUsage.prompt + sessionUsage.completion);
+    panelElemText('session_prompt', sessionUsage.prompt);
+    panelElemText('session_completion', sessionUsage.completion);
+    panelElemText('session_total', sessionUsage.total);
 
-    const sessionTotalCost = sessionUsage.promptCost + sessionUsage.completionCost;
-    panelElemText('session_prompt_cost', `${sessionUsage.promptCost.toFixed(5)}`);
-    panelElemText('session_completion_cost', `${sessionUsage.completionCost.toFixed(5)}`);
-    panelElemText('session_total_cost', `${sessionTotalCost.toFixed(5)}`);
+    panelElemText('session_promptCost', `${sessionUsage.promptCost.toFixed(5)}`);
+    panelElemText('session_completionCost', `${sessionUsage.completionCost.toFixed(5)}`);
+    panelElemText('session_totalCost', `${sessionUsage.totalCost.toFixed(5)}`);
 
-    panelElemText('session_reasoning_tokens', sessionUsage.reasoning);
-    panelElemText('session_response_tokens', sessionUsage.response);
+    panelElemText('session_reasoning', sessionUsage.reasoning);
+    panelElemText('session_response', sessionUsage.response);
 
-    panelElemText('session_prompt_cache_hit_tokens', sessionUsage.cacheHit);
-    panelElemText('session_prompt_cache_miss_tokens', sessionUsage.cacheMiss);
-    panelElemText('session_cache_ratio', `${sessionUsage.ratio.toFixed(1)}%`);
+    panelElemText('session_cacheHit', sessionUsage.cacheHit);
+    panelElemText('session_cacheMiss', sessionUsage.cacheMiss);
+    panelElemText('session_ratio', `${sessionUsage.ratio.toFixed(1)}%`);
 }
 
 jQuery(async () => {
