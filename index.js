@@ -17,18 +17,6 @@ const DEEPSEEK_COST = {
         cached: 0.003625,
         out: 0.87,
     },
-    // depreciated models.
-    // remove after july 27?
-    "deepseek-chat": {
-        in: 0.14,
-        cached: 0.0028,
-        out: 0.28,
-    },
-    "deepseek-reasoner": {
-        in: 0.14,
-        cached: 0.0028,
-        out: 0.28,
-    },
 };
 
 // Might be useful in the future, so we are storing it "globally"
