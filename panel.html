@@ -48,6 +48,28 @@
                         <small><sub>Only tracking the current session! Resets at tab refresh/close.</sup></small>
                     </div>
                 </fieldset>
+                <fieldset>
+                    <legend>Lifetime <small>of <span id="lifetime_requestCount">0</span> requests</small></legend>
+                    <div class="row center">
+                        <div class="item">$<span id="lifetime_totalCost">0.00</span></div>
+                        <div class="item"><span id="lifetime_total">0</span> tokens</div>
+                        <div class="item">
+                            (<span id="lifetime_prompt">0</span> / <span id="lifetime_completion">0</span>)
+                        </div>
+                    </div>
+                    <div class="row">
+                        <progress id="lifetime_ratio" value="0" max="100"></progress>
+                    </div>
+                    <div class="grid">
+                        <div class="item">Cache Hit: <span id="lifetime_cacheHit">0</span></div>
+                        <div class="item">Reasoning: <span id="lifetime_reasoning">0</span></div>
+                        <div class="item">Cache Miss: <span id="lifetime_cacheMiss">0</span></div>
+                        <div class="item">Response: <span id="lifetime_response">0</span></div>
+                    </div>
+                    <div class="row center">
+                        <small><sub>Overall stats <strong>for this browser</strong>.</sup></small>
+                    </div>
+                </fieldset>
             </div>
             <hr>
         </div>

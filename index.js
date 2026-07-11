@@ -48,6 +48,9 @@ let sessionUsage = {
     requestCount: 0,
 };
 
+/** @type {sessionUsage} */
+let lifetimeUsage;
+
 function log(...args) {
     console.log(`[${EXTENSION_NAME}]`, ...args);
 }
@@ -58,10 +61,33 @@ function log(...args) {
     }
 });
 
+
+// Hard coded for now.
+// What are these names
+function fetchLifetimeUsageFromLocalStorage() {
+    log("Fetching localStorage for saved stats.");
+
+    const raw = localStorage.getItem("lifetimeUsage");
+
+    if (!raw) {
+        log.warn("No lifetime stats saved.")
+        return sessionUsage;
+    }
+
+    return JSON.parse(raw);
+}
+
+function saveLifetimeUsageToLocalStorage() {
+    log("Saving lifetimeUsage.");
+    localStorage.setItem("lifetimeUsage", JSON.stringify(lifetimeUsage));
+}
+
 // Is this a bad idea?
 // Who knows.
 // It works.
 function overrideFetch() {
+    log("Patching window.fetch");
+
     const originalFetch = window.fetch;
     window.fetch = async function (...args) {
         const url = args[0];
@@ -198,6 +224,34 @@ function saveSessionUsage(tokens, cost) {
     sessionUsage.requestCount += 1;
 }
 
+/**
+ * @param {ReturnType<typeof parseUsageObject>} tokens
+ * @param {ReturnType<typeof calculateTokenCost>} cost
+ */
+// TODO: code repetitiion. Look above.
+function incrementLifetimeUsage(tokens, cost) {
+    lifetimeUsage.prompt += tokens.prompt;
+    lifetimeUsage.cacheHit += tokens.cacheHit;
+    lifetimeUsage.cacheMiss += tokens.cacheMiss;
+    lifetimeUsage.completion += tokens.completion;
+    lifetimeUsage.reasoning += tokens.reasoning;
+    lifetimeUsage.response += tokens.response;
+    lifetimeUsage.total += tokens.total;
+
+    lifetimeUsage.promptCost += cost.prompt;
+    lifetimeUsage.cacheHitCost += cost.cacheHit;
+    lifetimeUsage.cacheMissCost += cost.cacheMiss;
+    lifetimeUsage.completionCost += cost.completion;
+    lifetimeUsage.reasoningCost += cost.reasoning;
+    lifetimeUsage.responseCost += cost.response;
+    lifetimeUsage.totalCost += cost.total;
+
+    lifetimeUsage.ratio = lifetimeUsage.prompt > 0 ?
+        (lifetimeUsage.cacheHit / lifetimeUsage.prompt) * 100
+        : 0;
+    lifetimeUsage.requestCount += 1;
+}
+
 function panelElemId(id) {
     return document.getElementById("ds-token--" + id);
 }
@@ -217,9 +271,12 @@ function panelElemText(id, content) {
 function processUsageData(usage) {
     if (!usage) return;
 
+    log("Processing Usage data for display.");
     const tokens = parseUsageObject(usage);
     const tokenCost = calculateTokenCost(tokens);
     saveSessionUsage(tokens, tokenCost);
+    incrementLifetimeUsage(tokens, tokenCost);
+    saveLifetimeUsageToLocalStorage();
 
     // Last Message
     panelElemText('prompt', tokens.prompt);
@@ -235,27 +292,48 @@ function processUsageData(usage) {
     panelElemId('ratio').value = tokens.ratio;
     panelElemText('model', modelName);
 
-    // Session
-    panelElemText('session_prompt', sessionUsage.prompt);
-    panelElemText('session_completion', sessionUsage.completion);
-    panelElemText('session_total', sessionUsage.total);
-    panelElemText('session_totalCost', `${sessionUsage.totalCost.toFixed(5)}`);
+    updateNonLastStatsOnPanel("session");
+    updateNonLastStatsOnPanel("lifetime");
+}
 
-    panelElemText('session_reasoning', sessionUsage.reasoning);
-    panelElemText('session_response', sessionUsage.response);
+function updateNonLastStatsOnPanel(statType = "session") {
 
-    panelElemText('session_cacheHit', sessionUsage.cacheHit);
-    panelElemText('session_cacheMiss', sessionUsage.cacheMiss);
-    panelElemId('session_ratio').value = sessionUsage.ratio;
-    panelElemText('session_requestCount', sessionUsage.requestCount);
+    /** @type {sessionUsage} */
+    let stat;
+
+    if (statType === "session") {
+        stat = sessionUsage;
+    } else if(statType === "lifetime") {
+        stat = lifetimeUsage;
+    } else {
+        log.warn("Not valid statType:", statType);
+        return;
+    }
+
+    panelElemText(`${statType}_prompt`, stat.prompt);
+    panelElemText(`${statType}_completion`, stat.completion);
+    panelElemText(`${statType}_total`, stat.total);
+    panelElemText(`${statType}_totalCost`, `${stat.totalCost.toFixed(5)}`);
+
+    panelElemText(`${statType}_reasoning`, stat.reasoning);
+    panelElemText(`${statType}_response`, stat.response);
+
+    panelElemText(`${statType}_cacheHit`, stat.cacheHit);
+    panelElemText(`${statType}_cacheMiss`, stat.cacheMiss);
+    panelElemId(`${statType}_ratio`).value = stat.ratio;
+    panelElemText(`${statType}_requestCount`, stat.requestCount);
 }
 
 jQuery(async () => {
-    log("Loaded.");
+    overrideFetch();
+
+    lifetimeUsage = fetchLifetimeUsageFromLocalStorage();
 
     let panelHtml = await $.get(`${EXTENSION_FOLDER_PATH}/panel.html`);
     panelHtml = panelHtml.replaceAll('id="', `id="${PANEL_PREFIX}`);
     $("#extensions_settings2").append(panelHtml);
 
-    overrideFetch();
+    updateNonLastStatsOnPanel("lifetime");
+
+    log("Extension loaded!");
 });

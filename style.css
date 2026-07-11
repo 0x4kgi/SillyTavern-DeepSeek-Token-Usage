@@ -1,7 +1,9 @@
 .ds-token-usage-display {
     .container {
-        max-width: 350px;
+        max-width: 500px;
+        min-width: 350px;
         margin: auto;
+        overflow-y: scroll;
     }
 
     fieldset {
