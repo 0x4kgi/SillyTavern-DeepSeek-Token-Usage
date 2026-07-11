@@ -1,6 +1,8 @@
 # SillyTavern DeepSeek (Simple) Token Usage (viewer)
 
-![](img/screenshot.png)
+<p align="center">
+  <img src="img/screenshot.png" />
+</p>
 
 ## Features
 
