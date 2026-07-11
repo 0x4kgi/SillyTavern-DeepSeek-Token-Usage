@@ -1,5 +1,7 @@
-const extensionName = "SillyTavern-DeepSeek-Token-Usage";
-const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
+const EXTENSION_NAME = "SillyTavern-DeepSeek-Token-Usage";
+const EXTENSION_FOLDER_PATH = `scripts/extensions/third-party/${EXTENSION_NAME}`;
+
+const PANEL_PREFIX = "ds-token--";
 
 // Should be editable.
 // But since this ext is for personal use...
@@ -59,8 +61,14 @@ let sessionUsage = {
 };
 
 function log(...args) {
-    console.log(`[${extensionName}]`, ...args);
+    console.log(`[${EXTENSION_NAME}]`, ...args);
 }
+
+["warn", "error"].forEach(item => {
+    log[item] = function(...args) {
+        console[item](`[${EXTENSION_NAME}]`, ...args);
+    }
+});
 
 // Is this a bad idea?
 // Who knows.
@@ -92,7 +100,7 @@ function overrideFetch() {
 
             return response;
         } catch (error) {
-            console.error("Error intercepting fetch:", error);
+            log.error("Error intercepting fetch:", error);
         }
     };
 }
@@ -117,7 +125,7 @@ async function handleStream(stream) {
             }
         }
     } catch (err) {
-        console.error("Error reading stream:", err);
+        log.error("Error reading stream:", err);
     }
 }
 
@@ -175,6 +183,10 @@ function calculateTokenCost(tokens) {
     return obj;
 }
 
+/**
+ * @param {ReturnType<typeof parseUsageObject>} tokens
+ * @param {ReturnType<typeof calculateTokenCost>} cost
+ */
 function saveSessionUsage(tokens, cost) {
     sessionUsage.prompt += tokens.prompt;
     sessionUsage.cacheHit += tokens.cacheHit;
@@ -206,7 +218,7 @@ function panelElemText(id, content) {
     const elem = panelElemId(id);
 
     if (!elem) {
-        console.warn(`[${extensionName}]`, `Element not found: #ds-token--${id}`);
+        log.warn(`Element not found: #ds-token--${id}`);
         return;
     }
 
@@ -253,8 +265,8 @@ function processUsageData(usage) {
 jQuery(async () => {
     log("Loaded.");
 
-    let panelHtml = await $.get(`${extensionFolderPath}/panel.html`);
-    panelHtml = panelHtml.replaceAll('id="', 'id="ds-token--'); // bad idea?
+    let panelHtml = await $.get(`${EXTENSION_FOLDER_PATH}/panel.html`);
+    panelHtml = panelHtml.replaceAll('id="', `id="${PANEL_PREFIX}`);
     $("#extensions_settings2").append(panelHtml);
 
     overrideFetch();
