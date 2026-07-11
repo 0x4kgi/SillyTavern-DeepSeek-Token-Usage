@@ -56,7 +56,7 @@ function log(...args) {
 }
 
 ["warn", "error"].forEach(item => {
-    log[item] = function(...args) {
+    log[item] = function (...args) {
         console[item](`[${EXTENSION_NAME}]`, ...args);
     }
 });
@@ -303,7 +303,7 @@ function updateNonLastStatsOnPanel(statType = "session") {
 
     if (statType === "session") {
         stat = sessionUsage;
-    } else if(statType === "lifetime") {
+    } else if (statType === "lifetime") {
         stat = lifetimeUsage;
     } else {
         log.warn("Not valid statType:", statType);
