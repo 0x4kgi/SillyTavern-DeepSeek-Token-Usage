@@ -107,9 +107,19 @@ function overrideFetch() {
             modelName = requestJson.model || null;
             completionSource = requestJson.chat_completion_source || null;
 
+            const responseType = response.headers.get("Content-Type") ?? "";
+            const isStreaming = !responseType.includes("application/json")
+
             // since this is only useful for deepseek for now...
             if (completionSource === "deepseek") {
-                handleStream(clonedResponse.body);
+                if (isStreaming) {
+                    log("Response is streaming!")
+                    handleStream(clonedResponse.body);
+                } else {
+                    log("Response in non-streaming!");
+                    const responseJson = await clonedResponse.json();
+                    handleNonStream(responseJson);
+                }
             }
 
             return response;
@@ -140,6 +150,17 @@ async function handleStream(stream) {
         }
     } catch (err) {
         log.error("Error reading stream:", err);
+    }
+}
+
+async function handleNonStream(data) {
+    if (!data) return;
+
+    if (data.usage) {
+        log("Found Usage Data:", data.usage);
+        processUsageData(data.usage);
+    } else {
+        log.warn("Response does not include usage data.")
     }
 }
 
