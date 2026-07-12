@@ -71,7 +71,7 @@ function fetchLifetimeUsageFromLocalStorage() {
 
     if (!raw) {
         log.warn("No lifetime stats saved.")
-        return sessionUsage;
+        return structuredClone(sessionUsage);
     }
 
     return JSON.parse(raw);
