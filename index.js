@@ -247,8 +247,6 @@ function saveSessionUsage(tokens, cost) {
         sessionUsage.cost[parameter] += cost[parameter];
     });
 
-    sessionUsage.requestCount += 1;
-
     sessionLog.push({
         model: modelName,
         tokens: { ...tokens },
@@ -331,11 +329,14 @@ function updateNonLastStatsOnPanel(statType = "session") {
 
     /** @type {Usage} */
     let stat;
+    let requestCount;
 
     if (statType === "session") {
         stat = sessionUsage;
+        requestCount = sessionLog.length;
     } else if (statType === "lifetime") {
         stat = lifetimeUsage;
+        requestCount = lifetimeUsage.requestCount;
     } else {
         log.warn("Not valid statType:", statType);
         return;
@@ -355,8 +356,9 @@ function updateNonLastStatsOnPanel(statType = "session") {
 
     panelElemText(`${statType}_cacheHit`, stat.tokens.cacheHit);
     panelElemText(`${statType}_cacheMiss`, stat.tokens.cacheMiss);
+
     panelElemId(`${statType}_ratio`).value = ratio;
-    panelElemText(`${statType}_requestCount`, stat.requestCount);
+    panelElemText(`${statType}_requestCount`, requestCount);
 }
 
 function populateModelSelector() {
@@ -378,7 +380,6 @@ jQuery(async () => {
     lifetimeUsage = fetchLifetimeUsageFromLocalStorage();
 
     sessionUsage = structuredClone(Usage);
-    sessionUsage.requestCount ??= 0;
 
     let panelHtml = await $.get(`${EXTENSION_FOLDER_PATH}/panel.html`);
     panelHtml = panelHtml.replaceAll('id="', `id="${EXT_PREFIX}`);
