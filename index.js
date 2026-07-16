@@ -101,17 +101,27 @@ function overrideFetch() {
 
         try {
             const response = await originalFetch.apply(this, args);
+            handleResponse(response, requestBody)
+            return response;
+        } catch (error) {
+            log.error("Error intercepting fetch:", error);
+        }
+    };
+}
+
+async function handleResponse(response, requestBody) {
             const clonedResponse = response.clone();
 
             const requestJson = JSON.parse(requestBody?.body);
-            modelName = requestJson.model || null;
-            completionSource = requestJson.chat_completion_source || null;
+    modelName = requestJson.model ?? null;
+    completionSource = requestJson.chat_completion_source ?? null;
 
             const responseType = response.headers.get("Content-Type") ?? "";
             const isStreaming = !responseType.includes("application/json")
 
             // since this is only useful for deepseek for now...
-            if (completionSource === "deepseek") {
+    if (completionSource !== "deepseek") return;
+
                 if (isStreaming) {
                     log("Response is streaming!")
                     handleStream(clonedResponse.body);
@@ -120,13 +130,6 @@ function overrideFetch() {
                     const responseJson = await clonedResponse.json();
                     handleNonStream(responseJson);
                 }
-            }
-
-            return response;
-        } catch (error) {
-            log.error("Error intercepting fetch:", error);
-        }
-    };
 }
 
 async function handleStream(stream) {
