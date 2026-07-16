@@ -25,8 +25,7 @@ const DEEPSEEK_COST = {
 let modelName;
 let completionSource;
 
-const Usage = {
-    model: '',
+const Statistic = {
     prompt: 0,
     cacheHit: 0,
     cacheMiss: 0,
@@ -34,17 +33,12 @@ const Usage = {
     reasoning: 0,
     response: 0,
     total: 0,
+};
 
-    promptCost: 0.0,
-    cacheHitCost: 0.0,
-    cacheMissCost: 0.0,
-    completionCost: 0.0,
-    reasoningCost: 0.0,
-    responseCost: 0.0,
-    totalCost: 0.0,
-
-    ratio: 0.0,
-    requestCount: 0,
+const Usage = {
+    model: '',
+    tokens: structuredClone(Statistic),
+    cost: structuredClone(Statistic),
 };
 
 /** @type {Usage} */
@@ -73,13 +67,19 @@ function fetchLifetimeUsageFromLocalStorage() {
     log("Fetching localStorage for saved stats.");
 
     const raw = localStorage.getItem(`${EXT_PREFIX}lifetimeUsage`);
+    let data;
 
     if (!raw) {
         log.warn("No lifetime stats saved.")
-        return structuredClone(Usage);
+        data = structuredClone(Usage);
+    } else {
+        data = JSON.parse(raw);
     }
 
-    return JSON.parse(raw);
+    // add some needed values to prevent NaN-ing
+    data.requestCount ??= 0;
+
+    return data;
 }
 
 function saveLifetimeUsageToLocalStorage() {
@@ -87,9 +87,6 @@ function saveLifetimeUsageToLocalStorage() {
     localStorage.setItem(`${EXT_PREFIX}lifetimeUsage`, JSON.stringify(lifetimeUsage));
 }
 
-// Is this a bad idea?
-// Who knows.
-// It works.
 function overrideFetch() {
     log("Patching window.fetch");
 
@@ -188,6 +185,11 @@ function handleStreamLine(line) {
     } catch (_) { }
 }
 
+/**
+ *
+ * @param {any} usage
+ * @returns {Statistic}
+ */
 function parseUsageObject(usage) {
     const obj = {
         prompt: usage.prompt_tokens || 0,
@@ -200,11 +202,15 @@ function parseUsageObject(usage) {
         ratio: 0,
     }
     obj.response = obj.completion - obj.reasoning;
-    obj.ratio = obj.prompt > 0 ? (obj.cacheHit / obj.prompt) * 100 : 0;
 
     return obj;
 }
 
+/**
+ *
+ * @param {Statistic} tokens
+ * @returns {Statistic}
+ */
 function calculateTokenCost(tokens) {
     const tokenPrice = DEEPSEEK_COST[modelName];
     const cacheHitCost = tokenPrice.cached / 1_000_000;
@@ -227,67 +233,51 @@ function calculateTokenCost(tokens) {
 }
 
 /**
- * @param {ReturnType<typeof parseUsageObject>} tokens
- * @param {ReturnType<typeof calculateTokenCost>} cost
+ * @param {Statistic} tokens
+ * @param {Statistic} cost
  */
 function saveSessionUsage(tokens, cost) {
     sessionUsage.model = modelName;
 
-    sessionUsage.prompt += tokens.prompt;
-    sessionUsage.cacheHit += tokens.cacheHit;
-    sessionUsage.cacheMiss += tokens.cacheMiss;
-    sessionUsage.completion += tokens.completion;
-    sessionUsage.reasoning += tokens.reasoning;
-    sessionUsage.response += tokens.response;
-    sessionUsage.total += tokens.total;
+    Object.keys(tokens).forEach(parameter => {
+        sessionUsage.tokens[parameter] += tokens[parameter];
+    });
 
-    sessionUsage.promptCost += cost.prompt;
-    sessionUsage.cacheHitCost += cost.cacheHit;
-    sessionUsage.cacheMissCost += cost.cacheMiss;
-    sessionUsage.completionCost += cost.completion;
-    sessionUsage.reasoningCost += cost.reasoning;
-    sessionUsage.responseCost += cost.response;
-    sessionUsage.totalCost += cost.total;
+    Object.keys(cost).forEach(parameter => {
+        sessionUsage.cost[parameter] += cost[parameter];
+    });
 
-    sessionUsage.ratio = sessionUsage.prompt > 0 ?
-        (sessionUsage.cacheHit / sessionUsage.prompt) * 100
-        : 0;
     sessionUsage.requestCount += 1;
 
     sessionLog.push({
         model: modelName,
-        ...tokens
+        tokens: { ...tokens },
+        cost: { ...cost }
     });
 
+    log(sessionUsage);
     log(sessionLog);
 }
 
 /**
- * @param {ReturnType<typeof parseUsageObject>} tokens
- * @param {ReturnType<typeof calculateTokenCost>} cost
+ * @param {Statistic} tokens
+ * @param {Statistic} cost
  */
 // TODO: code repetitiion. Look above.
 function incrementLifetimeUsage(tokens, cost) {
-    lifetimeUsage.prompt += tokens.prompt;
-    lifetimeUsage.cacheHit += tokens.cacheHit;
-    lifetimeUsage.cacheMiss += tokens.cacheMiss;
-    lifetimeUsage.completion += tokens.completion;
-    lifetimeUsage.reasoning += tokens.reasoning;
-    lifetimeUsage.response += tokens.response;
-    lifetimeUsage.total += tokens.total;
+    lifetimeUsage.model = modelName;
 
-    lifetimeUsage.promptCost += cost.prompt;
-    lifetimeUsage.cacheHitCost += cost.cacheHit;
-    lifetimeUsage.cacheMissCost += cost.cacheMiss;
-    lifetimeUsage.completionCost += cost.completion;
-    lifetimeUsage.reasoningCost += cost.reasoning;
-    lifetimeUsage.responseCost += cost.response;
-    lifetimeUsage.totalCost += cost.total;
+    Object.keys(tokens).forEach(parameter => {
+        lifetimeUsage.tokens[parameter] += tokens[parameter];
+    });
 
-    lifetimeUsage.ratio = lifetimeUsage.prompt > 0 ?
-        (lifetimeUsage.cacheHit / lifetimeUsage.prompt) * 100
-        : 0;
+    Object.keys(cost).forEach(parameter => {
+        lifetimeUsage.cost[parameter] += cost[parameter];
+    });
+
     lifetimeUsage.requestCount += 1;
+
+    log(lifetimeUsage);
 }
 
 function panelElemId(id) {
@@ -305,7 +295,6 @@ function panelElemText(id, content) {
     elem.textContent = content;
 }
 
-// God, this fucntion looks so ass :sob:
 function processUsageData(usage) {
     if (!usage) return;
 
@@ -315,6 +304,10 @@ function processUsageData(usage) {
     saveSessionUsage(tokens, tokenCost);
     incrementLifetimeUsage(tokens, tokenCost);
     saveLifetimeUsageToLocalStorage();
+
+    const ratio = tokens.prompt > 0 ?
+        (tokens.cacheHit / tokens.prompt) * 100
+        : 0;
 
     // Last Message
     panelElemText('prompt', tokens.prompt);
@@ -327,7 +320,7 @@ function processUsageData(usage) {
 
     panelElemText('cacheHit', tokens.cacheHit);
     panelElemText('cacheMiss', tokens.cacheMiss);
-    panelElemId('ratio').value = tokens.ratio;
+    panelElemId('ratio').value = ratio;
     panelElemText('model', modelName);
 
     updateNonLastStatsOnPanel("session");
@@ -336,7 +329,7 @@ function processUsageData(usage) {
 
 function updateNonLastStatsOnPanel(statType = "session") {
 
-    /** @type {sessionUsage} */
+    /** @type {Usage} */
     let stat;
 
     if (statType === "session") {
@@ -348,17 +341,21 @@ function updateNonLastStatsOnPanel(statType = "session") {
         return;
     }
 
-    panelElemText(`${statType}_prompt`, stat.prompt);
-    panelElemText(`${statType}_completion`, stat.completion);
-    panelElemText(`${statType}_total`, stat.total);
-    panelElemText(`${statType}_totalCost`, `${stat.totalCost.toFixed(5)}`);
+    const ratio = stat.tokens.prompt > 0 ?
+        (stat.tokens.cacheHit / stat.tokens.prompt) * 100
+        : 0;
 
-    panelElemText(`${statType}_reasoning`, stat.reasoning);
-    panelElemText(`${statType}_response`, stat.response);
+    panelElemText(`${statType}_prompt`, stat.tokens.prompt);
+    panelElemText(`${statType}_completion`, stat.tokens.completion);
+    panelElemText(`${statType}_total`, stat.tokens.total);
+    panelElemText(`${statType}_totalCost`, `${stat.cost.total.toFixed(5)}`);
 
-    panelElemText(`${statType}_cacheHit`, stat.cacheHit);
-    panelElemText(`${statType}_cacheMiss`, stat.cacheMiss);
-    panelElemId(`${statType}_ratio`).value = stat.ratio;
+    panelElemText(`${statType}_reasoning`, stat.tokens.reasoning);
+    panelElemText(`${statType}_response`, stat.tokens.response);
+
+    panelElemText(`${statType}_cacheHit`, stat.tokens.cacheHit);
+    panelElemText(`${statType}_cacheMiss`, stat.tokens.cacheMiss);
+    panelElemId(`${statType}_ratio`).value = ratio;
     panelElemText(`${statType}_requestCount`, stat.requestCount);
 }
 
@@ -379,7 +376,9 @@ jQuery(async () => {
     overrideFetch();
 
     lifetimeUsage = fetchLifetimeUsageFromLocalStorage();
+
     sessionUsage = structuredClone(Usage);
+    sessionUsage.requestCount ??= 0;
 
     let panelHtml = await $.get(`${EXTENSION_FOLDER_PATH}/panel.html`);
     panelHtml = panelHtml.replaceAll('id="', `id="${EXT_PREFIX}`);
