@@ -252,9 +252,6 @@ function saveSessionUsage(tokens, cost) {
         tokens: { ...tokens },
         cost: { ...cost }
     });
-
-    log(sessionUsage);
-    log(sessionLog);
 }
 
 /**
@@ -274,8 +271,6 @@ function incrementLifetimeUsage(tokens, cost) {
     });
 
     lifetimeUsage.requestCount += 1;
-
-    log(lifetimeUsage);
 }
 
 function panelElemId(id) {
@@ -303,6 +298,60 @@ function processUsageData(usage) {
     incrementLifetimeUsage(tokens, tokenCost);
     saveLifetimeUsageToLocalStorage();
 
+    updateLastGenerationStats();
+
+    updateNonLastStatsOnPanel("session");
+    updateNonLastStatsOnPanel("lifetime");
+}
+
+/**
+ *
+ * @param {string} model
+ * @returns {Usage}
+ */
+function collectStatsForModel(model) {
+    let count = 0;
+    let modelData = sessionLog.filter(usageLog => usageLog.model === model)
+        .reduce((acc, curr) => {
+            // oh god what am i doing
+            Object.keys(curr.tokens).forEach(param => {
+                acc.tokens[param] += curr.tokens[param];
+            });
+
+            Object.keys(curr.cost).forEach(param => {
+                acc.cost[param] += curr.cost[param];
+            });
+
+            count += 1;
+
+            return acc;
+        }, structuredClone(Usage));
+    modelData.model = model;
+    modelData.count = count;
+
+    return modelData;
+}
+
+function updateLastGenerationStats() {
+    const selectedModel = panelElemId("modelSelector").value;
+
+    let tokens;
+    let tokenCost;
+    let modelName;
+    let lastLog;
+
+    if (selectedModel === "all") {
+        lastLog = sessionLog[sessionLog.length - 1];
+        modelName = lastLog ? lastLog.model : "deepseek-*";
+    } else {
+        let filtered = sessionLog.filter(usageLog => usageLog.model === selectedModel);
+        lastLog = filtered[filtered.length - 1];
+        modelName = selectedModel;
+    }
+
+    tokens = lastLog ? lastLog.tokens : structuredClone(Statistic);
+    tokenCost = lastLog ? lastLog.cost : structuredClone(Statistic);
+
     const ratio = tokens.prompt > 0 ?
         (tokens.cacheHit / tokens.prompt) * 100
         : 0;
@@ -320,20 +369,23 @@ function processUsageData(usage) {
     panelElemText('cacheMiss', tokens.cacheMiss);
     panelElemId('ratio').value = ratio;
     panelElemText('model', modelName);
-
-    updateNonLastStatsOnPanel("session");
-    updateNonLastStatsOnPanel("lifetime");
 }
 
 function updateNonLastStatsOnPanel(statType = "session") {
-
     /** @type {Usage} */
     let stat;
     let requestCount;
 
+    const selectedModel = panelElemId("modelSelector").value;
+
     if (statType === "session") {
-        stat = sessionUsage;
-        requestCount = sessionLog.length;
+        if (selectedModel === "all") {
+            stat = sessionUsage;
+            requestCount = sessionLog.length;
+        } else {
+            stat = collectStatsForModel(selectedModel);
+            requestCount = stat.count;
+        }
     } else if (statType === "lifetime") {
         stat = lifetimeUsage;
         requestCount = lifetimeUsage.requestCount;
@@ -374,6 +426,12 @@ function populateModelSelector() {
     });
 }
 
+function modelDropdownChange() {
+    const selectedModel = panelElemId("modelSelector").value;
+    updateLastGenerationStats();
+    updateNonLastStatsOnPanel("session");
+}
+
 jQuery(async () => {
     overrideFetch();
 
@@ -388,6 +446,8 @@ jQuery(async () => {
     updateNonLastStatsOnPanel("lifetime");
 
     populateModelSelector();
+
+    panelElemId("modelSelector").addEventListener("change", modelDropdownChange);
 
     log("Extension loaded!");
 });
