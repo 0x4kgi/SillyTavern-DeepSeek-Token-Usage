@@ -25,9 +25,8 @@ const DEEPSEEK_COST = {
 let modelName;
 let completionSource;
 
-// Ephemeral tracking
-// Will reset at page refresh. INTENTIONAL.
-let sessionUsage = {
+const Usage = {
+    model: '',
     prompt: 0,
     cacheHit: 0,
     cacheMiss: 0,
@@ -48,8 +47,14 @@ let sessionUsage = {
     requestCount: 0,
 };
 
-/** @type {sessionUsage} */
+/** @type {Usage} */
 let lifetimeUsage;
+
+/** @type {Usage} */
+let sessionUsage;
+
+/** @type {Usage[]} */
+let sessionLog = [];
 
 function log(...args) {
     console.log(`[${EXTENSION_NAME}]`, ...args);
@@ -71,7 +76,7 @@ function fetchLifetimeUsageFromLocalStorage() {
 
     if (!raw) {
         log.warn("No lifetime stats saved.")
-        return structuredClone(sessionUsage);
+        return structuredClone(Usage);
     }
 
     return JSON.parse(raw);
@@ -110,26 +115,26 @@ function overrideFetch() {
 }
 
 async function handleResponse(response, requestBody) {
-            const clonedResponse = response.clone();
+    const clonedResponse = response.clone();
 
-            const requestJson = JSON.parse(requestBody?.body);
+    const requestJson = JSON.parse(requestBody?.body);
     modelName = requestJson.model ?? null;
     completionSource = requestJson.chat_completion_source ?? null;
 
-            const responseType = response.headers.get("Content-Type") ?? "";
-            const isStreaming = !responseType.includes("application/json")
+    const responseType = response.headers.get("Content-Type") ?? "";
+    const isStreaming = !responseType.includes("application/json")
 
-            // since this is only useful for deepseek for now...
+    // since this is only useful for deepseek for now...
     if (completionSource !== "deepseek") return;
 
-                if (isStreaming) {
-                    log("Response is streaming!")
-                    handleStream(clonedResponse.body);
-                } else {
-                    log("Response in non-streaming!");
-                    const responseJson = await clonedResponse.json();
-                    handleNonStream(responseJson);
-                }
+    if (isStreaming) {
+        log("Response is streaming!")
+        handleStream(clonedResponse.body);
+    } else {
+        log("Response in non-streaming!");
+        const responseJson = await clonedResponse.json();
+        handleNonStream(responseJson);
+    }
 }
 
 async function handleStream(stream) {
@@ -226,6 +231,8 @@ function calculateTokenCost(tokens) {
  * @param {ReturnType<typeof calculateTokenCost>} cost
  */
 function saveSessionUsage(tokens, cost) {
+    sessionUsage.model = modelName;
+
     sessionUsage.prompt += tokens.prompt;
     sessionUsage.cacheHit += tokens.cacheHit;
     sessionUsage.cacheMiss += tokens.cacheMiss;
@@ -246,6 +253,13 @@ function saveSessionUsage(tokens, cost) {
         (sessionUsage.cacheHit / sessionUsage.prompt) * 100
         : 0;
     sessionUsage.requestCount += 1;
+
+    sessionLog.push({
+        model: modelName,
+        ...tokens
+    });
+
+    log(sessionLog);
 }
 
 /**
@@ -365,6 +379,7 @@ jQuery(async () => {
     overrideFetch();
 
     lifetimeUsage = fetchLifetimeUsageFromLocalStorage();
+    sessionUsage = structuredClone(Usage);
 
     let panelHtml = await $.get(`${EXTENSION_FOLDER_PATH}/panel.html`);
     panelHtml = panelHtml.replaceAll('id="', `id="${PANEL_PREFIX}`);
