@@ -1,7 +1,7 @@
 const EXTENSION_NAME = "SillyTavern-DeepSeek-Token-Usage";
 const EXTENSION_FOLDER_PATH = `scripts/extensions/third-party/${EXTENSION_NAME}`;
 
-const PANEL_PREFIX = "ds-token--";
+const EXT_PREFIX = "ds-token--";
 
 // Should be editable.
 // But since this ext is for personal use...
@@ -72,7 +72,7 @@ function log(...args) {
 function fetchLifetimeUsageFromLocalStorage() {
     log("Fetching localStorage for saved stats.");
 
-    const raw = localStorage.getItem("lifetimeUsage");
+    const raw = localStorage.getItem(`${EXT_PREFIX}lifetimeUsage`);
 
     if (!raw) {
         log.warn("No lifetime stats saved.")
@@ -84,7 +84,7 @@ function fetchLifetimeUsageFromLocalStorage() {
 
 function saveLifetimeUsageToLocalStorage() {
     log("Saving lifetimeUsage.");
-    localStorage.setItem("lifetimeUsage", JSON.stringify(lifetimeUsage));
+    localStorage.setItem(`${EXT_PREFIX}lifetimeUsage`, JSON.stringify(lifetimeUsage));
 }
 
 // Is this a bad idea?
@@ -382,7 +382,7 @@ jQuery(async () => {
     sessionUsage = structuredClone(Usage);
 
     let panelHtml = await $.get(`${EXTENSION_FOLDER_PATH}/panel.html`);
-    panelHtml = panelHtml.replaceAll('id="', `id="${PANEL_PREFIX}`);
+    panelHtml = panelHtml.replaceAll('id="', `id="${EXT_PREFIX}`);
     $("#extensions_settings2").append(panelHtml);
 
     updateNonLastStatsOnPanel("lifetime");
