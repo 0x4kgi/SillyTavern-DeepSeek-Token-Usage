@@ -345,6 +345,19 @@ function updateNonLastStatsOnPanel(statType = "session") {
     panelElemText(`${statType}_requestCount`, stat.requestCount);
 }
 
+function populateModelSelector() {
+    const modelSelector = panelElemId("modelSelector");
+
+    Object.keys(DEEPSEEK_COST).forEach(model => {
+        const select = document.createElement("option");
+
+        select.value = model;
+        select.innerHTML = model;
+
+        modelSelector.append(select);
+    });
+}
+
 jQuery(async () => {
     overrideFetch();
 
@@ -355,6 +368,8 @@ jQuery(async () => {
     $("#extensions_settings2").append(panelHtml);
 
     updateNonLastStatsOnPanel("lifetime");
+
+    populateModelSelector();
 
     log("Extension loaded!");
 });
