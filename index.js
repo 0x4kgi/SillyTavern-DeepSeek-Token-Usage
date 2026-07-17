@@ -19,12 +19,6 @@ const DEEPSEEK_COST = {
     },
 };
 
-// Might be useful in the future, so we are storing it "globally"
-// Will change everytime a gen occurs.
-// Not sure what to feel about it, for now.
-let modelName;
-let completionSource;
-
 const Statistic = {
     prompt: 0,
     cacheHit: 0,
@@ -37,14 +31,22 @@ const Statistic = {
 
 const Usage = {
     model: '',
+    timestamp: 0,
+    count: 0,
     tokens: structuredClone(Statistic),
-    cost: structuredClone(Statistic),
 };
 
-/** @type {Usage} */
+let accumulatedUsage = {
+    requestCount: 0,
+
+    /** @type {Object<string, Usage>} */
+    models: {}
+};
+
+/** @type {accumulatedUsage} */
 let lifetimeUsage;
 
-/** @type {Usage} */
+/** @type {accumulatedUsage} */
 let sessionUsage;
 
 /** @type {Usage[]} */
@@ -71,7 +73,7 @@ function fetchLifetimeUsageFromLocalStorage() {
 
     if (!raw) {
         log.warn("No lifetime stats saved.")
-        data = structuredClone(Usage);
+        data = structuredClone(accumulatedUsage);
     } else {
         data = JSON.parse(raw);
     }
@@ -84,7 +86,12 @@ function fetchLifetimeUsageFromLocalStorage() {
 
 function saveLifetimeUsageToLocalStorage() {
     log("Saving lifetimeUsage.");
-    localStorage.setItem(`${EXT_PREFIX}lifetimeUsage`, JSON.stringify(lifetimeUsage));
+
+    let _lifetimeUsage = structuredClone(lifetimeUsage);
+
+    log("What to save: ", _lifetimeUsage);
+
+    localStorage.setItem(`${EXT_PREFIX}lifetimeUsage`, JSON.stringify(_lifetimeUsage));
 }
 
 function overrideFetch() {
@@ -115,8 +122,7 @@ async function handleResponse(response, requestBody) {
     const clonedResponse = response.clone();
 
     const requestJson = JSON.parse(requestBody?.body);
-    modelName = requestJson.model ?? null;
-    completionSource = requestJson.chat_completion_source ?? null;
+    const completionSource = requestJson.chat_completion_source ?? null;
 
     const responseType = response.headers.get("Content-Type") ?? "";
     const isStreaming = !responseType.includes("application/json")
@@ -162,8 +168,8 @@ async function handleNonStream(data) {
     if (!data) return;
 
     if (data.usage) {
-        log("Found Usage Data:", data.usage);
-        processUsageData(data.usage);
+        log("Found Usage Data:", data.model, data.usage);
+        processUsageData(data.usage, data.model);
     } else {
         log.warn("Response does not include usage data.")
     }
@@ -179,8 +185,8 @@ function handleStreamLine(line) {
     try {
         const parsed = JSON.parse(jsonString);
         if (parsed && parsed.usage) {
-            log("Found Usage Data:", parsed.usage);
-            processUsageData(parsed.usage);
+            log("Found Usage Data:", parsed.model, parsed.usage);
+            processUsageData(parsed.usage, parsed.model);
         }
     } catch (_) { }
 }
@@ -191,6 +197,7 @@ function handleStreamLine(line) {
  * @returns {Statistic}
  */
 function parseUsageObject(usage) {
+    log("Parsing Usage Object...");
     const obj = {
         prompt: usage.prompt_tokens || 0,
         completion: usage.completion_tokens || 0,
@@ -209,9 +216,10 @@ function parseUsageObject(usage) {
 /**
  *
  * @param {Statistic} tokens
+ * @param {string} modelName
  * @returns {Statistic}
  */
-function calculateTokenCost(tokens) {
+function calculateTokenCost(tokens, modelName) {
     const tokenPrice = DEEPSEEK_COST[modelName];
     const cacheHitCost = tokenPrice.cached / 1_000_000;
     const cacheMissCost = tokenPrice.in / 1_000_000;
@@ -234,43 +242,42 @@ function calculateTokenCost(tokens) {
 
 /**
  * @param {Statistic} tokens
- * @param {Statistic} cost
+ * @param {string} model
  */
-function saveSessionUsage(tokens, cost) {
-    sessionUsage.model = modelName;
+function saveSessionUsage(tokens, model) {
+    let modelObject = sessionUsage.models[model];
+
+    modelObject.model = model;
+    modelObject.timestamp = Date.now();
+    modelObject.count += 1;
 
     Object.keys(tokens).forEach(parameter => {
-        sessionUsage.tokens[parameter] += tokens[parameter];
+        modelObject.tokens[parameter] += tokens[parameter];
     });
 
-    Object.keys(cost).forEach(parameter => {
-        sessionUsage.cost[parameter] += cost[parameter];
-    });
+    sessionUsage.requestCount += 1;
+    sessionUsage.models[model] = modelObject;
 
-    sessionLog.push({
-        model: modelName,
-        tokens: { ...tokens },
-        cost: { ...cost }
-    });
+    sessionLog.push(modelObject);
 }
 
 /**
  * @param {Statistic} tokens
- * @param {Statistic} cost
+ * @param {string} model
  */
-// TODO: code repetitiion. Look above.
-function incrementLifetimeUsage(tokens, cost) {
-    lifetimeUsage.model = modelName;
+function incrementLifetimeUsage(tokens, model) {
+    let modelObject = lifetimeUsage.models[model];
+
+    modelObject.model = model;
+    modelObject.timestamp = Date.now();
+    modelObject.count += 1;
 
     Object.keys(tokens).forEach(parameter => {
-        lifetimeUsage.tokens[parameter] += tokens[parameter];
-    });
-
-    Object.keys(cost).forEach(parameter => {
-        lifetimeUsage.cost[parameter] += cost[parameter];
+        modelObject.tokens[parameter] += tokens[parameter];
     });
 
     lifetimeUsage.requestCount += 1;
+    lifetimeUsage.models[model] = modelObject;
 }
 
 function panelElemId(id) {
@@ -288,14 +295,13 @@ function panelElemText(id, content) {
     elem.textContent = content;
 }
 
-function processUsageData(usage) {
+function processUsageData(usage, model) {
     if (!usage) return;
 
     log("Processing Usage data for display.");
     const tokens = parseUsageObject(usage);
-    const tokenCost = calculateTokenCost(tokens);
-    saveSessionUsage(tokens, tokenCost);
-    incrementLifetimeUsage(tokens, tokenCost);
+    saveSessionUsage(tokens, model);
+    incrementLifetimeUsage(tokens, model);
     saveLifetimeUsageToLocalStorage();
 
     updateLastGenerationStats();
@@ -332,6 +338,31 @@ function collectStatsForModel(model) {
     return modelData;
 }
 
+/**
+ *
+ * @param {accumulatedUsage} source
+ * @returns {Usage}
+ */
+function getAllModelStats(source) {
+    let accumulated = structuredClone(Usage);
+
+    Object.keys(source.models).forEach(modelName => {
+        const modelStats = source.models[modelName];
+        Object.keys(modelStats.tokens).forEach(param => {
+            accumulated.tokens[param] += modelStats.tokens[param];
+        });
+
+        const tokenCost = calculateTokenCost(modelStats.tokens, modelName);
+        accumulated.cost ??= structuredClone(Statistic);
+
+        Object.keys(tokenCost).forEach(param => {
+            accumulated.cost[param] += tokenCost[param];
+        });
+    });
+
+    return accumulated;
+}
+
 function updateLastGenerationStats() {
     const selectedModel = panelElemId("modelSelector").value;
 
@@ -350,7 +381,7 @@ function updateLastGenerationStats() {
     }
 
     tokens = lastLog ? lastLog.tokens : structuredClone(Statistic);
-    tokenCost = lastLog ? lastLog.cost : structuredClone(Statistic);
+    tokenCost = lastLog ? calculateTokenCost(tokens, modelName) : structuredClone(Statistic);
 
     const ratio = tokens.prompt > 0 ?
         (tokens.cacheHit / tokens.prompt) * 100
@@ -376,22 +407,29 @@ function updateNonLastStatsOnPanel(statType = "session") {
     let stat;
     let requestCount;
 
+    /** @type {accumulatedUsage} */
+    let sourceStat;
+
     const selectedModel = panelElemId("modelSelector").value;
 
     if (statType === "session") {
-        if (selectedModel === "all") {
-            stat = sessionUsage;
-            requestCount = sessionLog.length;
-        } else {
-            stat = collectStatsForModel(selectedModel);
-            requestCount = stat.count;
-        }
+        sourceStat = sessionUsage;
     } else if (statType === "lifetime") {
-        stat = lifetimeUsage;
-        requestCount = lifetimeUsage.requestCount;
+        sourceStat = lifetimeUsage;
     } else {
         log.warn("Not valid statType:", statType);
         return;
+    }
+
+    requestCount = sourceStat.requestCount;
+
+    if (selectedModel === "all") {
+        stat = getAllModelStats(sourceStat);
+        // stat.cost is handled by the function above
+    } else {
+        stat = sourceStat.models[selectedModel];
+        stat.cost = calculateTokenCost(stat.tokens, selectedModel);
+        requestCount = stat.count; // override when specific model, ig.
     }
 
     const ratio = stat.tokens.prompt > 0 ?
@@ -430,14 +468,18 @@ function modelDropdownChange() {
     const selectedModel = panelElemId("modelSelector").value;
     updateLastGenerationStats();
     updateNonLastStatsOnPanel("session");
+    updateNonLastStatsOnPanel("lifetime");
 }
 
 jQuery(async () => {
     overrideFetch();
 
-    lifetimeUsage = fetchLifetimeUsageFromLocalStorage();
+    Object.keys(DEEPSEEK_COST).forEach(modelName => {
+        accumulatedUsage.models[modelName] = structuredClone(Usage);
+    });
 
-    sessionUsage = structuredClone(Usage);
+    lifetimeUsage = fetchLifetimeUsageFromLocalStorage();
+    sessionUsage = structuredClone(accumulatedUsage);
 
     let panelHtml = await $.get(`${EXTENSION_FOLDER_PATH}/panel.html`);
     panelHtml = panelHtml.replaceAll('id="', `id="${EXT_PREFIX}`);
@@ -446,7 +488,6 @@ jQuery(async () => {
     updateNonLastStatsOnPanel("lifetime");
 
     populateModelSelector();
-
     panelElemId("modelSelector").addEventListener("change", modelDropdownChange);
 
     log("Extension loaded!");
