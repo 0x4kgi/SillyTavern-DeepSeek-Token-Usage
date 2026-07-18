@@ -258,7 +258,12 @@ function saveSessionUsage(tokens, model) {
     sessionUsage.requestCount += 1;
     sessionUsage.models[model] = modelObject;
 
-    sessionLog.push(modelObject);
+    sessionLog.push({
+        model: model,
+        timestamp: modelObject.timestamp,
+        count: 1,
+        tokens: { ...tokens },
+    });
 }
 
 /**
