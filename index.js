@@ -229,7 +229,12 @@ function parseUsageObject(usage) {
  * @returns {Statistic}
  */
 function calculateTokenCost(tokens, modelName) {
-    const tokenPrice = DEEPSEEK_COST[modelName] || DEFAULT_COST;
+    const tokenPrice = DEEPSEEK_COST[modelName];
+
+    if (!tokenPrice) {
+        return DEEPSEEK_COST;
+    }
+
     const cacheHitCost = tokenPrice.cached / 1_000_000;
     const cacheMissCost = tokenPrice.in / 1_000_000;
     const outputCost = tokenPrice.out / 1_000_000;
