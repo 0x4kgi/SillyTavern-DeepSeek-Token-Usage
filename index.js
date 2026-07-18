@@ -82,7 +82,7 @@ function fetchLifetimeUsageFromLocalStorage() {
         data = JSON.parse(raw);
     }
 
-    for (modelName in DEEPSEEK_COST) {
+    for (const modelName in DEEPSEEK_COST) {
         if (!data.models[modelName]) {
             data.models[modelName] = structuredClone(Usage);
         }
