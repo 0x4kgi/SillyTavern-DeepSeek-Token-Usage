@@ -241,11 +241,13 @@ function calculateTokenCost(tokens, modelName) {
 }
 
 /**
+ *
+ * @param {accumulatedUsage} usageLog
  * @param {Statistic} tokens
- * @param {string} model
+ * @param {Statistic} model
  */
-function saveSessionUsage(tokens, model) {
-    let modelObject = sessionUsage.models[model];
+function saveAggregatedUsage(usageLog, tokens, model) {
+    let modelObject = usageLog.models[model] || structuredClone(Usage);
 
     modelObject.model = model;
     modelObject.timestamp = Date.now();
@@ -255,34 +257,8 @@ function saveSessionUsage(tokens, model) {
         modelObject.tokens[parameter] += tokens[parameter];
     });
 
-    sessionUsage.requestCount += 1;
-    sessionUsage.models[model] = modelObject;
-
-    sessionLog.push({
-        model: model,
-        timestamp: modelObject.timestamp,
-        count: 1,
-        tokens: { ...tokens },
-    });
-}
-
-/**
- * @param {Statistic} tokens
- * @param {string} model
- */
-function incrementLifetimeUsage(tokens, model) {
-    let modelObject = lifetimeUsage.models[model];
-
-    modelObject.model = model;
-    modelObject.timestamp = Date.now();
-    modelObject.count += 1;
-
-    Object.keys(tokens).forEach(parameter => {
-        modelObject.tokens[parameter] += tokens[parameter];
-    });
-
-    lifetimeUsage.requestCount += 1;
-    lifetimeUsage.models[model] = modelObject;
+    usageLog.requestCount += 1;
+    usageLog.models[model] = modelObject;
 }
 
 function panelElemId(id) {
@@ -305,8 +281,16 @@ function processUsageData(usage, model) {
 
     log("Processing Usage data for display.");
     const tokens = parseUsageObject(usage);
-    saveSessionUsage(tokens, model);
-    incrementLifetimeUsage(tokens, model);
+    saveAggregatedUsage(sessionUsage, tokens, model);
+    saveAggregatedUsage(lifetimeUsage, tokens, model);
+
+    sessionLog.push({
+        model: model,
+        timestamp: Date.now(),
+        count: 1,
+        tokens: { ...tokens },
+    });
+
     saveLifetimeUsageToLocalStorage();
 
     updateLastGenerationStats();
