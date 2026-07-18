@@ -315,34 +315,6 @@ function processUsageData(usage, model) {
 
 /**
  *
- * @param {string} model
- * @returns {Usage}
- */
-function collectStatsForModel(model) {
-    let count = 0;
-    let modelData = sessionLog.filter(usageLog => usageLog.model === model)
-        .reduce((acc, curr) => {
-            // oh god what am i doing
-            Object.keys(curr.tokens).forEach(param => {
-                acc.tokens[param] += curr.tokens[param];
-            });
-
-            Object.keys(curr.cost).forEach(param => {
-                acc.cost[param] += curr.cost[param];
-            });
-
-            count += 1;
-
-            return acc;
-        }, structuredClone(Usage));
-    modelData.model = model;
-    modelData.count = count;
-
-    return modelData;
-}
-
-/**
- *
  * @param {accumulatedUsage} source
  * @returns {Usage}
  */
