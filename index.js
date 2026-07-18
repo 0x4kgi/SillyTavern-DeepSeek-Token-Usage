@@ -232,7 +232,7 @@ function calculateTokenCost(tokens, modelName) {
     const tokenPrice = DEEPSEEK_COST[modelName];
 
     if (!tokenPrice) {
-        return DEEPSEEK_COST;
+        return DEFAULT_COST;
     }
 
     const cacheHitCost = tokenPrice.cached / 1_000_000;
