@@ -60,7 +60,6 @@ let sessionLog = [];
 function log(...args) {
     console.log(`[${EXTENSION_NAME}]`, ...args);
 }
-
 ["warn", "error"].forEach(item => {
     log[item] = function (...args) {
         console[item](`[${EXTENSION_NAME}]`, ...args);
@@ -83,8 +82,11 @@ function fetchLifetimeUsageFromLocalStorage() {
         data = JSON.parse(raw);
     }
 
-    // add some needed values to prevent NaN-ing
-    data.requestCount ??= 0;
+    for (modelName in DEEPSEEK_COST) {
+        if (!data.models[modelName]) {
+            data.models[modelName] = structuredClone(Usage);
+        }
+    }
 
     return data;
 }
