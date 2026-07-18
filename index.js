@@ -18,6 +18,11 @@ const DEEPSEEK_COST = {
         out: 0.87,
     },
 };
+const DEFAULT_COST = {
+    in: 0.0,
+    cached: 0.0,
+    out: 0.0,
+}
 
 const Statistic = {
     prompt: 0,
@@ -220,7 +225,7 @@ function parseUsageObject(usage) {
  * @returns {Statistic}
  */
 function calculateTokenCost(tokens, modelName) {
-    const tokenPrice = DEEPSEEK_COST[modelName];
+    const tokenPrice = DEEPSEEK_COST[modelName] || DEFAULT_COST;
     const cacheHitCost = tokenPrice.cached / 1_000_000;
     const cacheMissCost = tokenPrice.in / 1_000_000;
     const outputCost = tokenPrice.out / 1_000_000;
