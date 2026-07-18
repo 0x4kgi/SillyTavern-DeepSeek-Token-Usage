@@ -286,7 +286,7 @@ function incrementLifetimeUsage(tokens, model) {
 }
 
 function panelElemId(id) {
-    return document.getElementById("ds-token--" + id);
+    return document.getElementById(EXT_PREFIX + id);
 }
 
 function panelElemText(id, content) {
