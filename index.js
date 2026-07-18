@@ -1,6 +1,5 @@
 const EXTENSION_NAME = "SillyTavern-DeepSeek-Token-Usage";
 const EXTENSION_FOLDER_PATH = `scripts/extensions/third-party/${EXTENSION_NAME}`;
-
 const EXT_PREFIX = "ds-token--";
 
 // Should be editable.
@@ -22,7 +21,7 @@ const DEFAULT_COST = {
     in: 0.0,
     cached: 0.0,
     out: 0.0,
-}
+};
 
 const Statistic = {
     prompt: 0,
@@ -33,7 +32,6 @@ const Statistic = {
     response: 0,
     total: 0,
 };
-
 const Usage = {
     model: '',
     timestamp: 0,
@@ -90,7 +88,6 @@ function fetchLifetimeUsageFromLocalStorage() {
 
     return data;
 }
-
 function saveLifetimeUsageToLocalStorage() {
     log("Saving lifetimeUsage.");
 
@@ -126,7 +123,6 @@ function overrideFetch() {
         return response;
     };
 }
-
 async function handleResponse(response, requestBody) {
     const clonedResponse = response.clone();
 
@@ -148,7 +144,6 @@ async function handleResponse(response, requestBody) {
         handleNonStream(responseJson);
     }
 }
-
 async function handleStream(stream) {
     if (!stream) return;
 
@@ -172,18 +167,6 @@ async function handleStream(stream) {
         log.error("Error reading stream:", err);
     }
 }
-
-async function handleNonStream(data) {
-    if (!data) return;
-
-    if (data.usage) {
-        log("Found Usage Data:", data.model, data.usage);
-        processUsageData(data.usage, data.model);
-    } else {
-        log.warn("Response does not include usage data.")
-    }
-}
-
 function handleStreamLine(line) {
     const trimmed = line.trim();
     if (!trimmed.startsWith("data:")) return;
@@ -198,6 +181,16 @@ function handleStreamLine(line) {
             processUsageData(parsed.usage, parsed.model);
         }
     } catch (_) { }
+}
+async function handleNonStream(data) {
+    if (!data) return;
+
+    if (data.usage) {
+        log("Found Usage Data:", data.model, data.usage);
+        processUsageData(data.usage, data.model);
+    } else {
+        log.warn("Response does not include usage data.")
+    }
 }
 
 /**
@@ -273,21 +266,6 @@ function saveAggregatedUsage(usageLog, tokens, model) {
 
     usageLog.requestCount += 1;
     usageLog.models[model] = modelObject;
-}
-
-function panelElemId(id) {
-    return document.getElementById(EXT_PREFIX + id);
-}
-
-function panelElemText(id, content) {
-    const elem = panelElemId(id);
-
-    if (!elem) {
-        log.warn(`Element not found: #ds-token--${id}`);
-        return;
-    }
-
-    elem.textContent = content;
 }
 
 function processUsageData(usage, model) {
@@ -376,7 +354,6 @@ function updateLastGenerationStats() {
     panelElemId('ratio').value = ratio;
     panelElemText('model', modelName);
 }
-
 function updateNonLastStatsOnPanel(statType = "session") {
     /** @type {Usage} */
     let stat;
@@ -426,6 +403,19 @@ function updateNonLastStatsOnPanel(statType = "session") {
     panelElemText(`${statType}_requestCount`, requestCount);
 }
 
+function panelElemId(id) {
+    return document.getElementById(EXT_PREFIX + id);
+}
+function panelElemText(id, content) {
+    const elem = panelElemId(id);
+
+    if (!elem) {
+        log.warn(`Element not found: #ds-token--${id}`);
+        return;
+    }
+
+    elem.textContent = content;
+}
 function populateModelSelector() {
     const modelSelector = panelElemId("modelSelector");
 
@@ -438,7 +428,6 @@ function populateModelSelector() {
         modelSelector.append(select);
     });
 }
-
 function modelDropdownChange() {
     const selectedModel = panelElemId("modelSelector").value;
     updateLastGenerationStats();
