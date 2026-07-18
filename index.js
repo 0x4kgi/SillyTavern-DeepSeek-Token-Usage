@@ -1,6 +1,5 @@
 const EXTENSION_NAME = "SillyTavern-DeepSeek-Token-Usage";
 const EXTENSION_FOLDER_PATH = `scripts/extensions/third-party/${EXTENSION_NAME}`;
-
 const EXT_PREFIX = "ds-token--";
 
 // Should be editable.
@@ -18,6 +17,11 @@ const DEEPSEEK_COST = {
         out: 0.87,
     },
 };
+const DEFAULT_COST = {
+    in: 0.0,
+    cached: 0.0,
+    out: 0.0,
+};
 
 const Statistic = {
     prompt: 0,
@@ -28,7 +32,6 @@ const Statistic = {
     response: 0,
     total: 0,
 };
-
 const Usage = {
     model: '',
     timestamp: 0,
@@ -55,7 +58,6 @@ let sessionLog = [];
 function log(...args) {
     console.log(`[${EXTENSION_NAME}]`, ...args);
 }
-
 ["warn", "error"].forEach(item => {
     log[item] = function (...args) {
         console[item](`[${EXTENSION_NAME}]`, ...args);
@@ -78,12 +80,14 @@ function fetchLifetimeUsageFromLocalStorage() {
         data = JSON.parse(raw);
     }
 
-    // add some needed values to prevent NaN-ing
-    data.requestCount ??= 0;
+    for (const modelName in DEEPSEEK_COST) {
+        if (!data.models[modelName]) {
+            data.models[modelName] = structuredClone(Usage);
+        }
+    }
 
     return data;
 }
-
 function saveLifetimeUsageToLocalStorage() {
     log("Saving lifetimeUsage.");
 
@@ -108,16 +112,17 @@ function overrideFetch() {
             return originalFetch.apply(this, args);
         }
 
+        const response = await originalFetch.apply(this, args);
+
         try {
-            const response = await originalFetch.apply(this, args);
             handleResponse(response, requestBody)
-            return response;
         } catch (error) {
             log.error("Error intercepting fetch:", error);
         }
+
+        return response;
     };
 }
-
 async function handleResponse(response, requestBody) {
     const clonedResponse = response.clone();
 
@@ -139,7 +144,6 @@ async function handleResponse(response, requestBody) {
         handleNonStream(responseJson);
     }
 }
-
 async function handleStream(stream) {
     if (!stream) return;
 
@@ -163,18 +167,6 @@ async function handleStream(stream) {
         log.error("Error reading stream:", err);
     }
 }
-
-async function handleNonStream(data) {
-    if (!data) return;
-
-    if (data.usage) {
-        log("Found Usage Data:", data.model, data.usage);
-        processUsageData(data.usage, data.model);
-    } else {
-        log.warn("Response does not include usage data.")
-    }
-}
-
 function handleStreamLine(line) {
     const trimmed = line.trim();
     if (!trimmed.startsWith("data:")) return;
@@ -189,6 +181,16 @@ function handleStreamLine(line) {
             processUsageData(parsed.usage, parsed.model);
         }
     } catch (_) { }
+}
+async function handleNonStream(data) {
+    if (!data) return;
+
+    if (data.usage) {
+        log("Found Usage Data:", data.model, data.usage);
+        processUsageData(data.usage, data.model);
+    } else {
+        log.warn("Response does not include usage data.")
+    }
 }
 
 /**
@@ -221,6 +223,11 @@ function parseUsageObject(usage) {
  */
 function calculateTokenCost(tokens, modelName) {
     const tokenPrice = DEEPSEEK_COST[modelName];
+
+    if (!tokenPrice) {
+        return DEFAULT_COST;
+    }
+
     const cacheHitCost = tokenPrice.cached / 1_000_000;
     const cacheMissCost = tokenPrice.in / 1_000_000;
     const outputCost = tokenPrice.out / 1_000_000;
@@ -241,11 +248,13 @@ function calculateTokenCost(tokens, modelName) {
 }
 
 /**
+ *
+ * @param {accumulatedUsage} usageLog
  * @param {Statistic} tokens
- * @param {string} model
+ * @param {Statistic} model
  */
-function saveSessionUsage(tokens, model) {
-    let modelObject = sessionUsage.models[model];
+function saveAggregatedUsage(usageLog, tokens, model) {
+    let modelObject = usageLog.models[model] || structuredClone(Usage);
 
     modelObject.model = model;
     modelObject.timestamp = Date.now();
@@ -255,49 +264,8 @@ function saveSessionUsage(tokens, model) {
         modelObject.tokens[parameter] += tokens[parameter];
     });
 
-    sessionUsage.requestCount += 1;
-    sessionUsage.models[model] = modelObject;
-
-    sessionLog.push({
-        model: model,
-        timestamp: modelObject.timestamp,
-        count: 1,
-        tokens: { ...tokens },
-    });
-}
-
-/**
- * @param {Statistic} tokens
- * @param {string} model
- */
-function incrementLifetimeUsage(tokens, model) {
-    let modelObject = lifetimeUsage.models[model];
-
-    modelObject.model = model;
-    modelObject.timestamp = Date.now();
-    modelObject.count += 1;
-
-    Object.keys(tokens).forEach(parameter => {
-        modelObject.tokens[parameter] += tokens[parameter];
-    });
-
-    lifetimeUsage.requestCount += 1;
-    lifetimeUsage.models[model] = modelObject;
-}
-
-function panelElemId(id) {
-    return document.getElementById("ds-token--" + id);
-}
-
-function panelElemText(id, content) {
-    const elem = panelElemId(id);
-
-    if (!elem) {
-        log.warn(`Element not found: #ds-token--${id}`);
-        return;
-    }
-
-    elem.textContent = content;
+    usageLog.requestCount += 1;
+    usageLog.models[model] = modelObject;
 }
 
 function processUsageData(usage, model) {
@@ -305,42 +273,22 @@ function processUsageData(usage, model) {
 
     log("Processing Usage data for display.");
     const tokens = parseUsageObject(usage);
-    saveSessionUsage(tokens, model);
-    incrementLifetimeUsage(tokens, model);
+    saveAggregatedUsage(sessionUsage, tokens, model);
+    saveAggregatedUsage(lifetimeUsage, tokens, model);
+
+    sessionLog.push({
+        model: model,
+        timestamp: Date.now(),
+        count: 1,
+        tokens: { ...tokens },
+    });
+
     saveLifetimeUsageToLocalStorage();
 
     updateLastGenerationStats();
 
     updateNonLastStatsOnPanel("session");
     updateNonLastStatsOnPanel("lifetime");
-}
-
-/**
- *
- * @param {string} model
- * @returns {Usage}
- */
-function collectStatsForModel(model) {
-    let count = 0;
-    let modelData = sessionLog.filter(usageLog => usageLog.model === model)
-        .reduce((acc, curr) => {
-            // oh god what am i doing
-            Object.keys(curr.tokens).forEach(param => {
-                acc.tokens[param] += curr.tokens[param];
-            });
-
-            Object.keys(curr.cost).forEach(param => {
-                acc.cost[param] += curr.cost[param];
-            });
-
-            count += 1;
-
-            return acc;
-        }, structuredClone(Usage));
-    modelData.model = model;
-    modelData.count = count;
-
-    return modelData;
 }
 
 /**
@@ -406,7 +354,6 @@ function updateLastGenerationStats() {
     panelElemId('ratio').value = ratio;
     panelElemText('model', modelName);
 }
-
 function updateNonLastStatsOnPanel(statType = "session") {
     /** @type {Usage} */
     let stat;
@@ -456,6 +403,19 @@ function updateNonLastStatsOnPanel(statType = "session") {
     panelElemText(`${statType}_requestCount`, requestCount);
 }
 
+function panelElemId(id) {
+    return document.getElementById(EXT_PREFIX + id);
+}
+function panelElemText(id, content) {
+    const elem = panelElemId(id);
+
+    if (!elem) {
+        log.warn(`Element not found: #ds-token--${id}`);
+        return;
+    }
+
+    elem.textContent = content;
+}
 function populateModelSelector() {
     const modelSelector = panelElemId("modelSelector");
 
@@ -468,7 +428,6 @@ function populateModelSelector() {
         modelSelector.append(select);
     });
 }
-
 function modelDropdownChange() {
     const selectedModel = panelElemId("modelSelector").value;
     updateLastGenerationStats();
