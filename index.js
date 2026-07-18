@@ -113,13 +113,15 @@ function overrideFetch() {
             return originalFetch.apply(this, args);
         }
 
+        const response = await originalFetch.apply(this, args);
+
         try {
-            const response = await originalFetch.apply(this, args);
             handleResponse(response, requestBody)
-            return response;
         } catch (error) {
             log.error("Error intercepting fetch:", error);
         }
+
+        return response;
     };
 }
 
