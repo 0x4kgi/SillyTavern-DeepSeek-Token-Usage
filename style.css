@@ -47,3 +47,9 @@
         font-weight: bolder;
     }
 }
+
+#ds-token--last_gen_stat {
+    margin: auto;
+    font-size: smaller;
+    color: gray;
+}

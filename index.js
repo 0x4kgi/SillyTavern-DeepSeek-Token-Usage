@@ -353,6 +353,8 @@ function updateLastGenerationStats() {
     panelElemText('cacheMiss', tokens.cacheMiss);
     panelElemId('ratio').value = ratio;
     panelElemText('model', modelName);
+
+    showLastOnMessage({modelName, tokens, ratio});
 }
 function updateNonLastStatsOnPanel(statType = "session") {
     /** @type {Usage} */
@@ -433,6 +435,28 @@ function modelDropdownChange() {
     updateLastGenerationStats();
     updateNonLastStatsOnPanel("session");
     updateNonLastStatsOnPanel("lifetime");
+}
+function showLastOnMessage({ modelName, tokens, ratio }) {
+    const statBlockElemId = EXT_PREFIX + "last_gen_stat";
+
+    const chatContainer = document.getElementById('chat');
+    const lastChatElem = chatContainer.lastChild;
+    let statBlock = document.getElementById(statBlockElemId);
+
+    if (!statBlock) {
+        log.warn("No statBlock element found in #chat.");
+        const newStatBlock = document.createElement("div");
+        newStatBlock.id = statBlockElemId;
+        chatContainer.appendChild(newStatBlock);
+        statBlock = newStatBlock;
+    }
+
+    if (lastChatElem.id !== statBlock.id) {
+        log("Moving statBlock to bottom.")
+        statBlock.parentNode.appendChild(statBlock);
+    }
+
+    statBlock.textContent = `${modelName}: ${tokens.prompt} → ${tokens.completion} (${ratio.toFixed(1)}%)`;
 }
 
 jQuery(async () => {
