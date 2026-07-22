@@ -381,7 +381,7 @@ function updateNonLastStatsOnPanel(statType = "session") {
         stat = getAllModelStats(sourceStat);
         // stat.cost is handled by the function above
     } else {
-        stat = sourceStat.models[selectedModel];
+        stat = sourceStat.models[selectedModel] || structuredClone(Usage);
         stat.cost = calculateTokenCost(stat.tokens, selectedModel);
         requestCount = stat.count; // override when specific model, ig.
     }
