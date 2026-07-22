@@ -130,13 +130,13 @@ async function handleResponse(response, requestBody) {
     const completionSource = requestJson.chat_completion_source ?? null;
 
     const responseType = response.headers.get("Content-Type") ?? "";
-    const isStreaming = !responseType.includes("application/json")
+    const isStreaming = !responseType.includes("application/json");
 
     // since this is only useful for deepseek for now...
     if (completionSource !== "deepseek") return;
 
     if (isStreaming) {
-        log("Response is streaming!")
+        log("Response is streaming!");
         handleStream(clonedResponse.body);
     } else {
         log("Response in non-streaming!");
@@ -189,7 +189,7 @@ async function handleNonStream(data) {
         log("Found Usage Data:", data.model, data.usage);
         processUsageData(data.usage, data.model);
     } else {
-        log.warn("Response does not include usage data.")
+        log.warn("Response does not include usage data.");
     }
 }
 
@@ -209,7 +209,7 @@ function parseUsageObject(usage) {
         cacheHit: usage.prompt_cache_hit_tokens || 0,
         cacheMiss: usage.prompt_cache_miss_tokens || 0,
         ratio: 0,
-    }
+    };
     obj.response = obj.completion - obj.reasoning;
 
     return obj;
