@@ -289,6 +289,8 @@ function processUsageData(usage, model) {
 
     updateNonLastStatsOnPanel("session");
     updateNonLastStatsOnPanel("lifetime");
+
+    updateSessionLogBarChart();
 }
 
 /**
@@ -404,6 +406,51 @@ function updateNonLastStatsOnPanel(statType = "session") {
     panelElemId(`${statType}_ratio`).value = ratio;
     panelElemText(`${statType}_requestCount`, requestCount);
 }
+function updateSessionLogBarChart() {
+    const chart = panelElemId("session_chart");
+    if (!chart) return;
+
+    chart.innerHTML = "";
+
+    const selectedModel = panelElemId("modelSelector").value;
+
+    let logs = sessionLog;
+    if (selectedModel !== "all") {
+        logs = logs.filter(log => log.model === selectedModel);
+    }
+
+    const last25 = logs.slice(-25);
+    if (last25.length === 0) return;
+
+    const maxTotal = Math.max(...last25.map(log => log.tokens.total));
+    if (maxTotal === 0) return;
+
+    const container = document.createElement("div");
+    container.className = "chart-container";
+
+    last25.forEach(log => {
+        const bar = document.createElement("div");
+        bar.className = "chart-bar";
+
+        const pct = (log.tokens.total / maxTotal) * 100;
+        bar.style.height = pct + "%";
+        bar.style.backgroundColor = modelNameToHsl(log.model);
+        bar.title = `${log.model}\n${log.tokens.total} tokens`;
+
+        container.appendChild(bar);
+    });
+
+    chart.appendChild(container);
+}
+
+function modelNameToHsl(name) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 70%, 60%)`;
+}
 
 function panelElemId(id) {
     return document.getElementById(EXT_PREFIX + id);
@@ -435,6 +482,7 @@ function modelDropdownChange() {
     updateLastGenerationStats();
     updateNonLastStatsOnPanel("session");
     updateNonLastStatsOnPanel("lifetime");
+    updateSessionLogBarChart();
 }
 function showLastOnMessage({ modelName, tokens, ratio }) {
     const statBlockElemId = EXT_PREFIX + "last_gen_stat";
