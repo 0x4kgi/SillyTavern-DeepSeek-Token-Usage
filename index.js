@@ -431,11 +431,25 @@ function updateSessionLogBarChart() {
     last25.forEach(log => {
         const bar = document.createElement("div");
         bar.className = "chart-bar";
-
-        const pct = (log.tokens.total / maxTotal) * 100;
-        bar.style.height = pct + "%";
-        bar.style.backgroundColor = modelNameToHsl(log.model);
+        bar.style.height = ((log.tokens.total / maxTotal) * 100) + "%";
         bar.title = `${log.model}\n${log.tokens.total} tokens`;
+
+        const total = log.tokens.total || 1;
+
+        const segments = [
+            { cls: "bar-seg-cacheHit",  val: log.tokens.cacheHit,  color: modelNameToHsl(log.model, 70, 60) },
+            { cls: "bar-seg-cacheMiss", val: log.tokens.cacheMiss, color: modelNameToHsl(log.model, 35, 75) },
+            { cls: "bar-seg-completion", val: log.tokens.completion, color: modelNameToHsl(log.model, 55, 45) },
+        ];
+
+        segments.forEach(seg => {
+            if (seg.val === 0) return;
+            const div = document.createElement("div");
+            div.className = "bar-seg " + seg.cls;
+            div.style.height = ((seg.val / total) * 100) + "%";
+            div.style.backgroundColor = seg.color;
+            bar.appendChild(div);
+        });
 
         container.appendChild(bar);
     });
@@ -443,13 +457,13 @@ function updateSessionLogBarChart() {
     chart.appendChild(container);
 }
 
-function modelNameToHsl(name) {
+function modelNameToHsl(name, saturation = 70, lightness = 60) {
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
         hash = name.charCodeAt(i) + ((hash << 5) - hash);
     }
     const hue = Math.abs(hash) % 360;
-    return `hsl(${hue}, 70%, 60%)`;
+    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 }
 
 function panelElemId(id) {
