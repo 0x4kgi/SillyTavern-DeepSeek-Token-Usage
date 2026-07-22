@@ -80,11 +80,11 @@ function fetchLifetimeUsageFromLocalStorage() {
         data = JSON.parse(raw);
     }
 
-    for (const modelName in DEEPSEEK_COST) {
+    Object.keys(DEEPSEEK_COST).forEach(modelName => {
         if (!data.models[modelName]) {
             data.models[modelName] = structuredClone(Usage);
         }
-    }
+    });
 
     return data;
 }
