@@ -451,7 +451,7 @@ function showLastOnMessage({ modelName, tokens, ratio }) {
         statBlock = newStatBlock;
     }
 
-    if (lastChatElem.id !== statBlock.id) {
+    if (lastChatElem && lastChatElem.id !== statBlock.id) {
         log("Moving statBlock to bottom.")
         statBlock.parentNode.appendChild(statBlock);
     }
