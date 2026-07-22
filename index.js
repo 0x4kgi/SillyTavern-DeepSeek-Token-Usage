@@ -432,7 +432,7 @@ function updateSessionLogBarChart() {
         const bar = document.createElement("div");
         bar.className = "chart-bar";
         bar.style.height = ((log.tokens.total / maxTotal) * 100) + "%";
-        bar.title = `${log.model}\n${log.tokens.total} tokens`;
+        bar.title = `${log.model}\n${log.tokens.total} tokens\n${log.tokens.cacheHit} hit\n${log.tokens.cacheMiss} miss\n${log.tokens.completion} completion`;
 
         const total = log.tokens.total || 1;
 
