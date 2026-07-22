@@ -251,7 +251,7 @@ function calculateTokenCost(tokens, modelName) {
  *
  * @param {accumulatedUsage} usageLog
  * @param {Statistic} tokens
- * @param {Statistic} model
+ * @param {string} model
  */
 function saveAggregatedUsage(usageLog, tokens, model) {
     let modelObject = usageLog.models[model] || structuredClone(Usage);
