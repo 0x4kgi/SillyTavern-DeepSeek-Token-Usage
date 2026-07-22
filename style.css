@@ -46,6 +46,29 @@
     .item span {
         font-weight: bolder;
     }
+
+    .chart-container {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-end;
+        height: 80px;
+        gap: 2px;
+        margin: 5px 0;
+        justify-content: center;
+    }
+
+    .chart-bar {
+        flex: 1;
+        max-width: 30px;
+        min-width: 4px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+    }
+
+    .bar-seg {
+        width: 100%;
+    }
 }
 
 #ds-token--last_gen_stat {

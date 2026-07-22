@@ -58,7 +58,7 @@ But if I decide to remove this restriction, the streaming response shoule have `
 
 ## AI Disclosure
 
-Initially vibe coded with Google Gemini.
+Initially vibe coded with Google Gemini. Then some code review and guided vibe code with DeepSeek V4 Pro Max.
 
 ## Special Thanks
 

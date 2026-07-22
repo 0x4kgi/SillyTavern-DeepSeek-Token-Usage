@@ -80,11 +80,11 @@ function fetchLifetimeUsageFromLocalStorage() {
         data = JSON.parse(raw);
     }
 
-    for (const modelName in DEEPSEEK_COST) {
+    Object.keys(DEEPSEEK_COST).forEach(modelName => {
         if (!data.models[modelName]) {
             data.models[modelName] = structuredClone(Usage);
         }
-    }
+    });
 
     return data;
 }
@@ -130,13 +130,13 @@ async function handleResponse(response, requestBody) {
     const completionSource = requestJson.chat_completion_source ?? null;
 
     const responseType = response.headers.get("Content-Type") ?? "";
-    const isStreaming = !responseType.includes("application/json")
+    const isStreaming = !responseType.includes("application/json");
 
     // since this is only useful for deepseek for now...
     if (completionSource !== "deepseek") return;
 
     if (isStreaming) {
-        log("Response is streaming!")
+        log("Response is streaming!");
         handleStream(clonedResponse.body);
     } else {
         log("Response in non-streaming!");
@@ -189,7 +189,7 @@ async function handleNonStream(data) {
         log("Found Usage Data:", data.model, data.usage);
         processUsageData(data.usage, data.model);
     } else {
-        log.warn("Response does not include usage data.")
+        log.warn("Response does not include usage data.");
     }
 }
 
@@ -209,7 +209,7 @@ function parseUsageObject(usage) {
         cacheHit: usage.prompt_cache_hit_tokens || 0,
         cacheMiss: usage.prompt_cache_miss_tokens || 0,
         ratio: 0,
-    }
+    };
     obj.response = obj.completion - obj.reasoning;
 
     return obj;
@@ -251,7 +251,7 @@ function calculateTokenCost(tokens, modelName) {
  *
  * @param {accumulatedUsage} usageLog
  * @param {Statistic} tokens
- * @param {Statistic} model
+ * @param {string} model
  */
 function saveAggregatedUsage(usageLog, tokens, model) {
     let modelObject = usageLog.models[model] || structuredClone(Usage);
@@ -289,6 +289,8 @@ function processUsageData(usage, model) {
 
     updateNonLastStatsOnPanel("session");
     updateNonLastStatsOnPanel("lifetime");
+
+    updateSessionLogBarChart();
 }
 
 /**
@@ -381,7 +383,7 @@ function updateNonLastStatsOnPanel(statType = "session") {
         stat = getAllModelStats(sourceStat);
         // stat.cost is handled by the function above
     } else {
-        stat = sourceStat.models[selectedModel];
+        stat = sourceStat.models[selectedModel] || structuredClone(Usage);
         stat.cost = calculateTokenCost(stat.tokens, selectedModel);
         requestCount = stat.count; // override when specific model, ig.
     }
@@ -403,6 +405,65 @@ function updateNonLastStatsOnPanel(statType = "session") {
 
     panelElemId(`${statType}_ratio`).value = ratio;
     panelElemText(`${statType}_requestCount`, requestCount);
+}
+function updateSessionLogBarChart() {
+    const chart = panelElemId("session_chart");
+    if (!chart) return;
+
+    chart.innerHTML = "";
+
+    const selectedModel = panelElemId("modelSelector").value;
+
+    let logs = sessionLog;
+    if (selectedModel !== "all") {
+        logs = logs.filter(log => log.model === selectedModel);
+    }
+
+    const last25 = logs.slice(-25);
+    if (last25.length === 0) return;
+
+    const maxTotal = Math.max(...last25.map(log => log.tokens.total));
+    if (maxTotal === 0) return;
+
+    const container = document.createElement("div");
+    container.className = "chart-container";
+
+    last25.forEach(log => {
+        const bar = document.createElement("div");
+        bar.className = "chart-bar";
+        bar.style.height = ((log.tokens.total / maxTotal) * 100) + "%";
+        bar.title = `${log.model}\n${log.tokens.total} tokens\n${log.tokens.cacheHit} hit\n${log.tokens.cacheMiss} miss\n${log.tokens.completion} completion`;
+
+        const total = log.tokens.total || 1;
+
+        const segments = [
+            { cls: "bar-seg-cacheMiss", val: log.tokens.cacheMiss, color: modelNameToHsl(log.model, 70, 95) },
+            { cls: "bar-seg-cacheHit",  val: log.tokens.cacheHit,  color: modelNameToHsl(log.model, 70, 60) },
+            { cls: "bar-seg-completion", val: log.tokens.completion, color: modelNameToHsl(log.model, 55, 45) },
+        ];
+
+        segments.forEach(seg => {
+            if (seg.val === 0) return;
+            const div = document.createElement("div");
+            div.className = "bar-seg " + seg.cls;
+            div.style.height = ((seg.val / total) * 100) + "%";
+            div.style.backgroundColor = seg.color;
+            bar.appendChild(div);
+        });
+
+        container.appendChild(bar);
+    });
+
+    chart.appendChild(container);
+}
+
+function modelNameToHsl(name, saturation = 70, lightness = 60) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 }
 
 function panelElemId(id) {
@@ -435,6 +496,7 @@ function modelDropdownChange() {
     updateLastGenerationStats();
     updateNonLastStatsOnPanel("session");
     updateNonLastStatsOnPanel("lifetime");
+    updateSessionLogBarChart();
 }
 function showLastOnMessage({ modelName, tokens, ratio }) {
     const statBlockElemId = EXT_PREFIX + "last_gen_stat";
@@ -451,7 +513,7 @@ function showLastOnMessage({ modelName, tokens, ratio }) {
         statBlock = newStatBlock;
     }
 
-    if (lastChatElem.id !== statBlock.id) {
+    if (lastChatElem && lastChatElem.id !== statBlock.id) {
         log("Moving statBlock to bottom.")
         statBlock.parentNode.appendChild(statBlock);
     }
