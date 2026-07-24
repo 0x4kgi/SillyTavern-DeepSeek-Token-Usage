@@ -143,13 +143,19 @@ async function handleResponse(response, requestBody) {
     // since this is only useful for deepseek for now...
     if (completionSource !== "deepseek") return;
 
+    let result;
+
     if (isStreaming) {
         log("Response is streaming!");
-        handleStream(clonedResponse.body);
+        result = await handleStream(clonedResponse.body);
     } else {
         log("Response in non-streaming!");
         const responseJson = await clonedResponse.json();
-        handleNonStream(responseJson);
+        result = await handleNonStream(responseJson);
+    }
+
+    if (result && result.usage) {
+        processUsageData(result.usage, result.model);
     }
 }
 async function handleStream(stream) {
@@ -158,6 +164,9 @@ async function handleStream(stream) {
     const reader = stream.getReader();
     const decoder = new TextDecoder("utf-8");
     let buffer = "";
+
+    let lastUsage;
+    let lastModel;
 
     try {
         while (true) {
@@ -168,11 +177,20 @@ async function handleStream(stream) {
             buffer = lines.pop();
 
             for (const line of lines) {
-                handleStreamLine(line);
+                const result = handleStreamLine(line);
+                if (result) {
+                    lastUsage = result.usage;
+                    lastModel = result.model;
+                }
             }
         }
     } catch (err) {
         log.error("Error reading stream:", err);
+    }
+
+    return {
+        usage: lastUsage,
+        model: lastModel,
     }
 }
 function handleStreamLine(line) {
@@ -186,7 +204,10 @@ function handleStreamLine(line) {
         const parsed = JSON.parse(jsonString);
         if (parsed && parsed.usage) {
             log("Found Usage Data:", parsed.model, parsed.usage);
-            processUsageData(parsed.usage, parsed.model);
+            return {
+                usage: parsed.usage,
+                model: parsed.model,
+            };
         }
     } catch (_) { }
 }
@@ -195,7 +216,10 @@ async function handleNonStream(data) {
 
     if (data.usage) {
         log("Found Usage Data:", data.model, data.usage);
-        processUsageData(data.usage, data.model);
+        return {
+            usage: data.usage,
+            model: data.model,
+        }
     } else {
         log.warn("Response does not include usage data.");
     }
