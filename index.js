@@ -64,6 +64,14 @@ function log(...args) {
     }
 });
 
+function debounce(func, timeout = 300){
+    let timer;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => { func.apply(this, args); }, timeout);
+    };
+}
+
 
 // Hard coded for now.
 // What are these names
@@ -285,12 +293,7 @@ function processUsageData(usage, model) {
 
     saveLifetimeUsageToLocalStorage();
 
-    updateLastGenerationStats();
-
-    updateNonLastStatsOnPanel("session");
-    updateNonLastStatsOnPanel("lifetime");
-
-    updateSessionLogBarChart();
+    renderUIDebounced();
 }
 
 /**
@@ -457,6 +460,14 @@ function updateSessionLogBarChart() {
     chart.appendChild(container);
 }
 
+const renderUIDebounced = debounce(renderUI, 150);
+function renderUI() {
+    updateLastGenerationStats();
+    updateNonLastStatsOnPanel("session");
+    updateNonLastStatsOnPanel("lifetime");
+    updateSessionLogBarChart();
+}
+
 function modelNameToHsl(name, saturation = 70, lightness = 60) {
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
@@ -492,11 +503,7 @@ function populateModelSelector() {
     });
 }
 function modelDropdownChange() {
-    const selectedModel = panelElemId("modelSelector").value;
-    updateLastGenerationStats();
-    updateNonLastStatsOnPanel("session");
-    updateNonLastStatsOnPanel("lifetime");
-    updateSessionLogBarChart();
+    renderUIDebounced();
 }
 function showLastOnMessage({ modelName, tokens, ratio }) {
     const statBlockElemId = EXT_PREFIX + "last_gen_stat";
