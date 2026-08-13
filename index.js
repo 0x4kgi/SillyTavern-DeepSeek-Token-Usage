@@ -121,6 +121,7 @@ function fetchDeepSeekCostFromLocalStorage() {
 
     return data;
 }
+const saveDeepSeekCostToLocalStorageDebounced = debounce(saveDeepSeekCostToLocalStorage, 1000);
 function saveDeepSeekCostToLocalStorage() {
     log("Saving DEEPSEEK_COST.");
 
@@ -590,7 +591,7 @@ function savePriceEditor() {
 
     DEEPSEEK_COST = newCosts;
 
-    saveDeepSeekCostToLocalStorage();
+    saveDeepSeekCostToLocalStorageDebounced();
     populateModelSelector();
     renderUIDebounced();
 }
