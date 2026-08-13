@@ -2,10 +2,8 @@ const EXTENSION_NAME = "SillyTavern-DeepSeek-Token-Usage";
 const EXTENSION_FOLDER_PATH = `scripts/extensions/third-party/${EXTENSION_NAME}`;
 const EXT_PREFIX = "ds-token--";
 
-// Should be editable.
-// But since this ext is for personal use...
-// eh.
-const DEEPSEEK_COST = {
+// Default prices, shown in the price editor on load.
+const DEFAULT_DEEPSEEK_COST = {
     "deepseek-v4-flash": {
         in: 0.14,
         cached: 0.0028,
@@ -17,6 +15,9 @@ const DEEPSEEK_COST = {
         out: 0.87,
     },
 };
+
+// Current prices, filled from the price editor UI.
+let DEEPSEEK_COST = {};
 const DEFAULT_COST = {
     in: 0.0,
     cached: 0.0,
@@ -516,6 +517,14 @@ function panelElemText(id, content) {
 }
 function populateModelSelector() {
     const modelSelector = panelElemId("modelSelector");
+    const currentValue = modelSelector.value;
+
+    modelSelector.innerHTML = "";
+
+    const allOption = document.createElement("option");
+    allOption.value = "all";
+    allOption.innerHTML = "All models";
+    modelSelector.append(allOption);
 
     Object.keys(DEEPSEEK_COST).forEach(model => {
         const select = document.createElement("option");
@@ -525,9 +534,78 @@ function populateModelSelector() {
 
         modelSelector.append(select);
     });
+
+    modelSelector.value = DEEPSEEK_COST[currentValue] ? currentValue : "all";
 }
 function modelDropdownChange() {
     renderUIDebounced();
+}
+
+const savePriceEditorDebounced = debounce(savePriceEditor, 300);
+function savePriceEditor() {
+    log("Saving price editor values.");
+
+    const rows = panelElemId("priceEditorRows").querySelectorAll(".price-editor-row");
+    const newCosts = {};
+
+    rows.forEach(row => {
+        const modelName = row.querySelector('[data-field="modelName"]').value.trim();
+        const cached = parseFloat(row.querySelector('[data-field="cached"]').value);
+        const inCost = parseFloat(row.querySelector('[data-field="in"]').value);
+        const outCost = parseFloat(row.querySelector('[data-field="out"]').value);
+
+        if (!modelName) return;
+        if (isNaN(cached) || isNaN(inCost) || isNaN(outCost)) return;
+
+        newCosts[modelName] = {
+            in: inCost,
+            cached: cached,
+            out: outCost,
+        };
+    });
+
+    DEEPSEEK_COST = newCosts;
+
+    populateModelSelector();
+    renderUIDebounced();
+}
+function populatePriceEditor() {
+    const rowsContainer = panelElemId("priceEditorRows");
+    rowsContainer.innerHTML = "";
+
+    Object.keys(DEFAULT_DEEPSEEK_COST).forEach(modelName => {
+        const modelCost = DEFAULT_DEEPSEEK_COST[modelName];
+        rowsContainer.appendChild(createPriceRow(modelName, modelCost));
+    });
+}
+function createPriceRow(modelName, cost) {
+    const row = document.createElement("div");
+    row.className = "price-editor-row";
+
+    row.appendChild(createPriceInput("text", "modelName", modelName));
+    row.appendChild(createPriceInput("number", "cached", cost.cached));
+    row.appendChild(createPriceInput("number", "in", cost.in));
+    row.appendChild(createPriceInput("number", "out", cost.out));
+
+    return row;
+}
+function createPriceInput(type, field, value) {
+    const input = document.createElement("input");
+    input.type = type;
+    input.step = "0.0001";
+    input.dataset.field = field;
+    input.value = value;
+    input.className = "text_pole"; // ST built-in CSS
+    input.addEventListener("input", savePriceEditorDebounced);
+
+    return input;
+}
+function addModelRow() {
+    const rowsContainer = panelElemId("priceEditorRows");
+    const row = createPriceRow("", DEFAULT_COST);
+
+    rowsContainer.appendChild(row);
+    row.querySelector("input").focus();
 }
 function showLastOnMessage({ modelName, tokens, ratio }) {
     const statBlockElemId = EXT_PREFIX + "last_gen_stat";
@@ -555,6 +633,8 @@ function showLastOnMessage({ modelName, tokens, ratio }) {
 jQuery(async () => {
     overrideFetch();
 
+    DEEPSEEK_COST = structuredClone(DEFAULT_DEEPSEEK_COST);
+
     Object.keys(DEEPSEEK_COST).forEach(modelName => {
         accumulatedUsage.models[modelName] = structuredClone(Usage);
     });
@@ -569,7 +649,9 @@ jQuery(async () => {
     updateNonLastStatsOnPanel("lifetime");
 
     populateModelSelector();
+    populatePriceEditor();
     panelElemId("modelSelector").addEventListener("change", modelDropdownChange);
+    panelElemId("addModelBtn").addEventListener("click", addModelRow);
 
     log("Extension loaded!");
 });
