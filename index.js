@@ -120,6 +120,12 @@ function fetchDeepSeekCostFromLocalStorage() {
         data = JSON.parse(raw);
     }
 
+    Object.keys(DEFAULT_DEEPSEEK_COST).forEach(modelName => {
+        if (!data[modelName]) {
+            data[modelName] = structuredClone(DEFAULT_DEEPSEEK_COST[modelName]);
+        }
+    });
+
     return data;
 }
 const saveDeepSeekCostToLocalStorageDebounced = debounce(saveDeepSeekCostToLocalStorage, 1000);
