@@ -69,6 +69,28 @@
     .bar-seg {
         width: 100%;
     }
+
+    .price-editor {
+        margin-top: 10px;
+    }
+
+    .price-editor summary {
+        cursor: pointer;
+        font-weight: bolder;
+    }
+
+    .price-editor-row {
+        display: flex;
+        flex-direction: row;
+        gap: 5px;
+        margin: 5px 0;
+    }
+
+    .price-editor-row input,
+    .price-editor-header span {
+        flex-grow: 1;
+        min-width: 0;
+    }
 }
 
 #ds-token--last_gen_stat {

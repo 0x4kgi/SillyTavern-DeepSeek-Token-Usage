@@ -2,10 +2,10 @@ const EXTENSION_NAME = "SillyTavern-DeepSeek-Token-Usage";
 const EXTENSION_FOLDER_PATH = `scripts/extensions/third-party/${EXTENSION_NAME}`;
 const EXT_PREFIX = "ds-token--";
 
-// Should be editable.
-// But since this ext is for personal use...
-// eh.
-const DEEPSEEK_COST = {
+// Default prices, as fallback
+// Need to update this when DS's price updates
+// https://api-docs.deepseek.com/quick_start/pricing
+const DEFAULT_DEEPSEEK_COST = {
     "deepseek-v4-flash": {
         in: 0.14,
         cached: 0.0028,
@@ -22,6 +22,9 @@ const DEFAULT_COST = {
     cached: 0.0,
     out: 0.0,
 };
+
+/** @type {Object<string, DEFAULT_COST>} */
+let deepseekCost = {};
 
 const Statistic = {
     prompt: 0,
@@ -64,6 +67,13 @@ function log(...args) {
     }
 });
 
+function debounce(func, timeout = 300){
+    let timer;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => { func.apply(this, args); }, timeout);
+    };
+}
 
 // Hard coded for now.
 // What are these names
@@ -80,7 +90,7 @@ function fetchLifetimeUsageFromLocalStorage() {
         data = JSON.parse(raw);
     }
 
-    Object.keys(DEEPSEEK_COST).forEach(modelName => {
+    Object.keys(deepseekCost).forEach(modelName => {
         if (!data.models[modelName]) {
             data.models[modelName] = structuredClone(Usage);
         }
@@ -96,6 +106,37 @@ function saveLifetimeUsageToLocalStorage() {
     log("What to save: ", _lifetimeUsage);
 
     localStorage.setItem(`${EXT_PREFIX}lifetimeUsage`, JSON.stringify(_lifetimeUsage));
+}
+function fetchDeepSeekCostFromLocalStorage() {
+    log("Fetching localStorage for saved prices.");
+
+    const raw = localStorage.getItem(`${EXT_PREFIX}deepseekCost`);
+    let data;
+
+    if (!raw) {
+        log.warn("No price data saved.")
+        data = structuredClone(DEFAULT_DEEPSEEK_COST);
+    } else {
+        data = JSON.parse(raw);
+    }
+
+    Object.keys(DEFAULT_DEEPSEEK_COST).forEach(modelName => {
+        if (!data[modelName]) {
+            data[modelName] = structuredClone(DEFAULT_DEEPSEEK_COST[modelName]);
+        }
+    });
+
+    return data;
+}
+const saveDeepSeekCostToLocalStorageDebounced = debounce(saveDeepSeekCostToLocalStorage, 1000);
+function saveDeepSeekCostToLocalStorage() {
+    log("Saving deepseekCost.");
+
+    let _deepSeekCost = structuredClone(deepseekCost);
+
+    log("What to save: ", _deepSeekCost);
+
+    localStorage.setItem(`${EXT_PREFIX}deepseekCost`, JSON.stringify(_deepSeekCost));
 }
 
 function overrideFetch() {
@@ -135,13 +176,19 @@ async function handleResponse(response, requestBody) {
     // since this is only useful for deepseek for now...
     if (completionSource !== "deepseek") return;
 
+    let result;
+
     if (isStreaming) {
         log("Response is streaming!");
-        handleStream(clonedResponse.body);
+        result = await handleStream(clonedResponse.body);
     } else {
         log("Response in non-streaming!");
         const responseJson = await clonedResponse.json();
-        handleNonStream(responseJson);
+        result = await handleNonStream(responseJson);
+    }
+
+    if (result && result.usage) {
+        processUsageData(result.usage, result.model);
     }
 }
 async function handleStream(stream) {
@@ -150,6 +197,9 @@ async function handleStream(stream) {
     const reader = stream.getReader();
     const decoder = new TextDecoder("utf-8");
     let buffer = "";
+
+    let lastUsage;
+    let lastModel;
 
     try {
         while (true) {
@@ -160,11 +210,20 @@ async function handleStream(stream) {
             buffer = lines.pop();
 
             for (const line of lines) {
-                handleStreamLine(line);
+                const result = handleStreamLine(line);
+                if (result) {
+                    lastUsage = result.usage;
+                    lastModel = result.model;
+                }
             }
         }
     } catch (err) {
         log.error("Error reading stream:", err);
+    }
+
+    return {
+        usage: lastUsage,
+        model: lastModel,
     }
 }
 function handleStreamLine(line) {
@@ -178,7 +237,10 @@ function handleStreamLine(line) {
         const parsed = JSON.parse(jsonString);
         if (parsed && parsed.usage) {
             log("Found Usage Data:", parsed.model, parsed.usage);
-            processUsageData(parsed.usage, parsed.model);
+            return {
+                usage: parsed.usage,
+                model: parsed.model,
+            };
         }
     } catch (_) { }
 }
@@ -187,7 +249,10 @@ async function handleNonStream(data) {
 
     if (data.usage) {
         log("Found Usage Data:", data.model, data.usage);
-        processUsageData(data.usage, data.model);
+        return {
+            usage: data.usage,
+            model: data.model,
+        }
     } else {
         log.warn("Response does not include usage data.");
     }
@@ -222,7 +287,7 @@ function parseUsageObject(usage) {
  * @returns {Statistic}
  */
 function calculateTokenCost(tokens, modelName) {
-    const tokenPrice = DEEPSEEK_COST[modelName];
+    const tokenPrice = deepseekCost[modelName];
 
     if (!tokenPrice) {
         return DEFAULT_COST;
@@ -285,12 +350,7 @@ function processUsageData(usage, model) {
 
     saveLifetimeUsageToLocalStorage();
 
-    updateLastGenerationStats();
-
-    updateNonLastStatsOnPanel("session");
-    updateNonLastStatsOnPanel("lifetime");
-
-    updateSessionLogBarChart();
+    renderUIDebounced();
 }
 
 /**
@@ -457,6 +517,14 @@ function updateSessionLogBarChart() {
     chart.appendChild(container);
 }
 
+const renderUIDebounced = debounce(renderUI, 150);
+function renderUI() {
+    updateLastGenerationStats();
+    updateNonLastStatsOnPanel("session");
+    updateNonLastStatsOnPanel("lifetime");
+    updateSessionLogBarChart();
+}
+
 function modelNameToHsl(name, saturation = 70, lightness = 60) {
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
@@ -481,8 +549,16 @@ function panelElemText(id, content) {
 }
 function populateModelSelector() {
     const modelSelector = panelElemId("modelSelector");
+    const currentValue = modelSelector.value;
 
-    Object.keys(DEEPSEEK_COST).forEach(model => {
+    modelSelector.innerHTML = "";
+
+    const allOption = document.createElement("option");
+    allOption.value = "all";
+    allOption.innerHTML = "All models";
+    modelSelector.append(allOption);
+
+    Object.keys(deepseekCost).forEach(model => {
         const select = document.createElement("option");
 
         select.value = model;
@@ -490,14 +566,80 @@ function populateModelSelector() {
 
         modelSelector.append(select);
     });
+
+    modelSelector.value = deepseekCost[currentValue] ? currentValue : "all";
 }
 function modelDropdownChange() {
-    const selectedModel = panelElemId("modelSelector").value;
-    updateLastGenerationStats();
-    updateNonLastStatsOnPanel("session");
-    updateNonLastStatsOnPanel("lifetime");
-    updateSessionLogBarChart();
+    renderUIDebounced();
 }
+
+const savePriceEditorDebounced = debounce(savePriceEditor, 300);
+function savePriceEditor() {
+    log("Saving price editor values.");
+
+    const rows = panelElemId("priceEditorRows").querySelectorAll(".price-editor-row");
+    const newCosts = {};
+
+    rows.forEach(row => {
+        const modelName = row.querySelector('[data-field="modelName"]').value.trim();
+        const cached = parseFloat(row.querySelector('[data-field="cached"]').value);
+        const inCost = parseFloat(row.querySelector('[data-field="in"]').value);
+        const outCost = parseFloat(row.querySelector('[data-field="out"]').value);
+
+        if (!modelName) return;
+        if (isNaN(cached) || isNaN(inCost) || isNaN(outCost)) return;
+
+        newCosts[modelName] = {
+            in: inCost,
+            cached: cached,
+            out: outCost,
+        };
+    });
+
+    deepseekCost = newCosts;
+
+    saveDeepSeekCostToLocalStorageDebounced();
+    populateModelSelector();
+    renderUIDebounced();
+}
+function populatePriceEditor() {
+    const rowsContainer = panelElemId("priceEditorRows");
+    rowsContainer.innerHTML = "";
+
+    Object.keys(deepseekCost).forEach(modelName => {
+        const modelCost = deepseekCost[modelName];
+        rowsContainer.appendChild(createPriceRow(modelName, modelCost));
+    });
+}
+function createPriceRow(modelName, cost) {
+    const row = document.createElement("div");
+    row.className = "price-editor-row";
+
+    row.appendChild(createPriceInput("text", "modelName", modelName));
+    row.appendChild(createPriceInput("number", "cached", cost.cached));
+    row.appendChild(createPriceInput("number", "in", cost.in));
+    row.appendChild(createPriceInput("number", "out", cost.out));
+
+    return row;
+}
+function createPriceInput(type, field, value) {
+    const input = document.createElement("input");
+    input.type = type;
+    input.step = "0.0001";
+    input.dataset.field = field;
+    input.value = value;
+    input.className = "text_pole"; // ST built-in CSS
+
+    return input;
+}
+function addModelRow() {
+    const rowsContainer = panelElemId("priceEditorRows");
+    const row = createPriceRow("", DEFAULT_COST);
+
+    rowsContainer.appendChild(row);
+    row.querySelector("input").focus();
+}
+
 function showLastOnMessage({ modelName, tokens, ratio }) {
     const statBlockElemId = EXT_PREFIX + "last_gen_stat";
 
@@ -524,7 +666,9 @@ function showLastOnMessage({ modelName, tokens, ratio }) {
 jQuery(async () => {
     overrideFetch();
 
-    Object.keys(DEEPSEEK_COST).forEach(modelName => {
+    deepseekCost = fetchDeepSeekCostFromLocalStorage();
+
+    Object.keys(deepseekCost).forEach(modelName => {
         accumulatedUsage.models[modelName] = structuredClone(Usage);
     });
 
@@ -538,7 +682,10 @@ jQuery(async () => {
     updateNonLastStatsOnPanel("lifetime");
 
     populateModelSelector();
+    populatePriceEditor();
     panelElemId("modelSelector").addEventListener("change", modelDropdownChange);
+    panelElemId("priceEditorRows").addEventListener("input", savePriceEditorDebounced);
+    panelElemId("addModelBtn").addEventListener("click", addModelRow);
 
     log("Extension loaded!");
 });
