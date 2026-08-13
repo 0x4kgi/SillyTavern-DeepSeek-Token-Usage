@@ -622,7 +622,6 @@ function createPriceInput(type, field, value) {
     input.dataset.field = field;
     input.value = value;
     input.className = "text_pole"; // ST built-in CSS
-    input.addEventListener("input", savePriceEditorDebounced);
 
     return input;
 }
@@ -677,6 +676,7 @@ jQuery(async () => {
     populateModelSelector();
     populatePriceEditor();
     panelElemId("modelSelector").addEventListener("change", modelDropdownChange);
+    panelElemId("priceEditorRows").addEventListener("input", savePriceEditorDebounced);
     panelElemId("addModelBtn").addEventListener("click", addModelRow);
 
     log("Extension loaded!");
