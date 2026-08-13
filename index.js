@@ -2,7 +2,9 @@ const EXTENSION_NAME = "SillyTavern-DeepSeek-Token-Usage";
 const EXTENSION_FOLDER_PATH = `scripts/extensions/third-party/${EXTENSION_NAME}`;
 const EXT_PREFIX = "ds-token--";
 
-// Default prices, shown in the price editor on load.
+// Default prices, as fallback
+// Need to update this when DS's price updates
+// https://api-docs.deepseek.com/quick_start/pricing
 const DEFAULT_DEEPSEEK_COST = {
     "deepseek-v4-flash": {
         in: 0.14,
@@ -15,14 +17,14 @@ const DEFAULT_DEEPSEEK_COST = {
         out: 0.87,
     },
 };
-
-// Current prices, filled from the price editor UI.
-let DEEPSEEK_COST = {};
 const DEFAULT_COST = {
     in: 0.0,
     cached: 0.0,
     out: 0.0,
 };
+
+/** @type {Object<string, DEFAULT_COST>} */
+let deepseekCost = {};
 
 const Statistic = {
     prompt: 0,
@@ -73,7 +75,6 @@ function debounce(func, timeout = 300){
     };
 }
 
-
 // Hard coded for now.
 // What are these names
 function fetchLifetimeUsageFromLocalStorage() {
@@ -89,7 +90,7 @@ function fetchLifetimeUsageFromLocalStorage() {
         data = JSON.parse(raw);
     }
 
-    Object.keys(DEEPSEEK_COST).forEach(modelName => {
+    Object.keys(deepseekCost).forEach(modelName => {
         if (!data.models[modelName]) {
             data.models[modelName] = structuredClone(Usage);
         }
@@ -123,9 +124,9 @@ function fetchDeepSeekCostFromLocalStorage() {
 }
 const saveDeepSeekCostToLocalStorageDebounced = debounce(saveDeepSeekCostToLocalStorage, 1000);
 function saveDeepSeekCostToLocalStorage() {
-    log("Saving DEEPSEEK_COST.");
+    log("Saving deepseekCost.");
 
-    let _deepSeekCost = structuredClone(DEEPSEEK_COST);
+    let _deepSeekCost = structuredClone(deepseekCost);
 
     log("What to save: ", _deepSeekCost);
 
@@ -280,7 +281,7 @@ function parseUsageObject(usage) {
  * @returns {Statistic}
  */
 function calculateTokenCost(tokens, modelName) {
-    const tokenPrice = DEEPSEEK_COST[modelName];
+    const tokenPrice = deepseekCost[modelName];
 
     if (!tokenPrice) {
         return DEFAULT_COST;
@@ -551,7 +552,7 @@ function populateModelSelector() {
     allOption.innerHTML = "All models";
     modelSelector.append(allOption);
 
-    Object.keys(DEEPSEEK_COST).forEach(model => {
+    Object.keys(deepseekCost).forEach(model => {
         const select = document.createElement("option");
 
         select.value = model;
@@ -560,7 +561,7 @@ function populateModelSelector() {
         modelSelector.append(select);
     });
 
-    modelSelector.value = DEEPSEEK_COST[currentValue] ? currentValue : "all";
+    modelSelector.value = deepseekCost[currentValue] ? currentValue : "all";
 }
 function modelDropdownChange() {
     renderUIDebounced();
@@ -589,7 +590,7 @@ function savePriceEditor() {
         };
     });
 
-    DEEPSEEK_COST = newCosts;
+    deepseekCost = newCosts;
 
     saveDeepSeekCostToLocalStorageDebounced();
     populateModelSelector();
@@ -599,8 +600,8 @@ function populatePriceEditor() {
     const rowsContainer = panelElemId("priceEditorRows");
     rowsContainer.innerHTML = "";
 
-    Object.keys(DEEPSEEK_COST).forEach(modelName => {
-        const modelCost = DEEPSEEK_COST[modelName];
+    Object.keys(deepseekCost).forEach(modelName => {
+        const modelCost = deepseekCost[modelName];
         rowsContainer.appendChild(createPriceRow(modelName, modelCost));
     });
 }
@@ -632,6 +633,7 @@ function addModelRow() {
     rowsContainer.appendChild(row);
     row.querySelector("input").focus();
 }
+
 function showLastOnMessage({ modelName, tokens, ratio }) {
     const statBlockElemId = EXT_PREFIX + "last_gen_stat";
 
@@ -658,9 +660,9 @@ function showLastOnMessage({ modelName, tokens, ratio }) {
 jQuery(async () => {
     overrideFetch();
 
-    DEEPSEEK_COST = fetchDeepSeekCostFromLocalStorage();
+    deepseekCost = fetchDeepSeekCostFromLocalStorage();
 
-    Object.keys(DEEPSEEK_COST).forEach(modelName => {
+    Object.keys(deepseekCost).forEach(modelName => {
         accumulatedUsage.models[modelName] = structuredClone(Usage);
     });
 
