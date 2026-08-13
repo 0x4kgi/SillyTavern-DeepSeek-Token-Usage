@@ -106,6 +106,30 @@ function saveLifetimeUsageToLocalStorage() {
 
     localStorage.setItem(`${EXT_PREFIX}lifetimeUsage`, JSON.stringify(_lifetimeUsage));
 }
+function fetchDeepSeekCostFromLocalStorage() {
+    log("Fetching localStorage for saved prices.");
+
+    const raw = localStorage.getItem(`${EXT_PREFIX}deepseekCost`);
+    let data;
+
+    if (!raw) {
+        log.warn("No price data saved.")
+        data = structuredClone(DEFAULT_DEEPSEEK_COST);
+    } else {
+        data = JSON.parse(raw);
+    }
+
+    return data;
+}
+function saveDeepSeekCostToLocalStorage() {
+    log("Saving DEEPSEEK_COST.");
+
+    let _deepSeekCost = structuredClone(DEEPSEEK_COST);
+
+    log("What to save: ", _deepSeekCost);
+
+    localStorage.setItem(`${EXT_PREFIX}deepseekCost`, JSON.stringify(_deepSeekCost));
+}
 
 function overrideFetch() {
     log("Patching window.fetch");
@@ -566,6 +590,7 @@ function savePriceEditor() {
 
     DEEPSEEK_COST = newCosts;
 
+    saveDeepSeekCostToLocalStorage();
     populateModelSelector();
     renderUIDebounced();
 }
@@ -573,8 +598,8 @@ function populatePriceEditor() {
     const rowsContainer = panelElemId("priceEditorRows");
     rowsContainer.innerHTML = "";
 
-    Object.keys(DEFAULT_DEEPSEEK_COST).forEach(modelName => {
-        const modelCost = DEFAULT_DEEPSEEK_COST[modelName];
+    Object.keys(DEEPSEEK_COST).forEach(modelName => {
+        const modelCost = DEEPSEEK_COST[modelName];
         rowsContainer.appendChild(createPriceRow(modelName, modelCost));
     });
 }
@@ -633,7 +658,7 @@ function showLastOnMessage({ modelName, tokens, ratio }) {
 jQuery(async () => {
     overrideFetch();
 
-    DEEPSEEK_COST = structuredClone(DEFAULT_DEEPSEEK_COST);
+    DEEPSEEK_COST = fetchDeepSeekCostFromLocalStorage();
 
     Object.keys(DEEPSEEK_COST).forEach(modelName => {
         accumulatedUsage.models[modelName] = structuredClone(Usage);
