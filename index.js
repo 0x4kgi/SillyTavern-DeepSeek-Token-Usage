@@ -27,7 +27,6 @@ const DEFAULT_PEAK_TIMES = [
     ["01:00", "04:00"],
     ["06:00", "10:00"],
 ];
-const UTC_MINUTE_OFFSET = new Date().getTimezoneOffset();
 
 /** @type {Object<string, DEFAULT_COST>} */
 let deepseekCost = {};
@@ -90,7 +89,12 @@ function fetchFromLocalStorage(key, defaultValue) {
         log.warn(`No ${key} stats saved.`)
         data = structuredClone(defaultValue);
     } else {
-        data = JSON.parse(raw);
+        try {
+            data = JSON.parse(raw);
+        } catch (error) {
+            log.warn(`Corrupt ${key} stats, using defaults.`, error);
+            data = structuredClone(defaultValue);
+        }
     }
 
     return data;
@@ -145,7 +149,22 @@ function fetchPeakTimesFromLocalStorage() {
 
     let data = fetchFromLocalStorage("deepseekPeakTimes", DEFAULT_PEAK_TIMES);
 
+    if (!Array.isArray(data)) {
+        log.warn("Saved peak times are not an array, using defaults.");
+        return structuredClone(DEFAULT_PEAK_TIMES);
+    }
+
+    data = data.filter(isValidPeakTime);
+
     return data;
+}
+function isValidPeakTime(times) {
+    if (!Array.isArray(times) || times.length < 2) return false;
+
+    const [start, end] = times;
+    if (typeof start !== "string" || typeof end !== "string") return false;
+
+    return !Number.isNaN(timeToInt(start)) && !Number.isNaN(timeToInt(end));
 }
 const savePeakTimesToLocalStorageDebounced = debounce(savePeakTimesToLocalStorage, 1000);
 function savePeakTimesToLocalStorage() {
@@ -704,15 +723,15 @@ function createTimeInput(value, field) {
     input.type = "time";
     // 1:00 does not work, it ABSOLUTELY needs 01:00
     // ternary for the case of new row.
-    input.value = value ? value.padStart(5,"0") : value;
+    input.value = value ? value.padStart(5, "0") : "";
     input.dataset.field = field;
     input.className = "text_pole";
 
     return input;
 }
-function addTimeRow(){
+function addTimeRow() {
     const rowsContainer = panelElemId("peakTimeEditorRows");
-    const row = createTimesRow(0,0);
+    const row = createTimesRow("", "");
     rowsContainer.appendChild(row);
     row.querySelector("input").focus();
 }
@@ -720,7 +739,7 @@ function showCurrentUTCTime() {
     const currentTime = new Date();
     const hour = currentTime.getUTCHours().toString().padStart(2, "0");
     const minute = currentTime.getUTCMinutes().toString().padStart(2, "0");
-    const formattedTime = `${hour}:${minute}`.padStart(5, "0");
+    const formattedTime = `${hour}:${minute}`;
 
     let msg;
 
@@ -738,13 +757,6 @@ function timeToInt(time) {
     const minute = parseInt(splitTime[1]);
 
     return (hour * 60) + minute;
-}
-function timeIntToUtc(time) {
-    const minutesInDay = 1440; // 24h * 60m
-    const localWithOffset = timeToInt(time) + UTC_MINUTE_OFFSET;
-
-    // I don't like how this formula looks, but it works.
-    return ((localWithOffset % minutesInDay) + minutesInDay) % minutesInDay;
 }
 function isTimeTargetBetween(start, end, value) {
     if (start > end) {
@@ -820,6 +832,7 @@ jQuery(async () => {
     panelElemId("timeInUtcBtn").addEventListener("click", showCurrentUTCTime);
     panelElemId("addPeakTimeBtn").addEventListener("click", addTimeRow);
     showCurrentUTCTime();
+    setInterval(showCurrentUTCTime, 30000);
 
     log("Extension loaded!");
 });
