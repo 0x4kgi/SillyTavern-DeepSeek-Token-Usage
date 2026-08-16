@@ -22,9 +22,16 @@ const DEFAULT_COST = {
     cached: 0.0,
     out: 0.0,
 };
+const DEFAULT_PEAK_TIMES = [
+    // UTC times
+    ["01:00", "04:00"],
+    ["06:00", "10:00"],
+];
+const UTC_MINUTE_OFFSET = new Date().getTimezoneOffset();
 
 /** @type {Object<string, DEFAULT_COST>} */
 let deepseekCost = {};
+let peakTimes = [];
 
 const Statistic = {
     prompt: 0,
@@ -137,6 +144,31 @@ function saveDeepSeekCostToLocalStorage() {
     log("What to save: ", _deepSeekCost);
 
     localStorage.setItem(`${EXT_PREFIX}deepseekCost`, JSON.stringify(_deepSeekCost));
+}
+function fetchPeakTimesFromLocalStorage() {
+    log("Fetching localStorage for saved times.");
+
+    const raw = localStorage.getItem(`${EXT_PREFIX}deepseekPeakTimes`);
+    let data;
+
+    if (!raw) {
+        log.warn("No time data saved.")
+        data = structuredClone(DEFAULT_PEAK_TIMES);
+    } else {
+        data = JSON.parse(raw);
+    }
+
+    return data;
+}
+const savePeakTimesToLocalStorageDebounced = debounce(savePeakTimesToLocalStorage, 1000);
+function savePeakTimesToLocalStorage() {
+    log("Saving peakTimes.");
+
+    let _peakTimes = structuredClone(peakTimes);
+
+    log("What to save: ", _peakTimes);
+
+    localStorage.setItem(`${EXT_PREFIX}deepseekPeakTimes`, JSON.stringify(_peakTimes));
 }
 
 function overrideFetch() {
@@ -577,7 +609,7 @@ const savePriceEditorDebounced = debounce(savePriceEditor, 300);
 function savePriceEditor() {
     log("Saving price editor values.");
 
-    const rows = panelElemId("priceEditorRows").querySelectorAll(".price-editor-row");
+    const rows = panelElemId("priceEditorRows").querySelectorAll(".settings-editor-row");
     const newCosts = {};
 
     rows.forEach(row => {
@@ -613,7 +645,7 @@ function populatePriceEditor() {
 }
 function createPriceRow(modelName, cost) {
     const row = document.createElement("div");
-    row.className = "price-editor-row";
+    row.className = "settings-editor-row";
 
     row.appendChild(createPriceInput("text", "modelName", modelName));
     row.appendChild(createPriceInput("number", "cached", cost.cached));
@@ -638,6 +670,113 @@ function addModelRow() {
 
     rowsContainer.appendChild(row);
     row.querySelector("input").focus();
+}
+
+const savePeakTimeEditorDebounced = debounce(savePeakTimeEditor, 300);
+function savePeakTimeEditor() {
+    log("Saving peak time editor values.");
+
+    const rows = panelElemId("peakTimeEditorRows").querySelectorAll(".settings-editor-row");
+    const newTimes = [];
+
+    rows.forEach(row => {
+        const start = row.querySelector('[data-field="start"]').value;
+        const end = row.querySelector('[data-field="end"]').value;
+
+        if (!start || !end) return;
+
+        newTimes.push([start, end]);
+    });
+
+    peakTimes = newTimes;
+
+    savePeakTimesToLocalStorageDebounced();
+    showCurrentUTCTime();
+    renderUIDebounced();
+}
+function populatePeakTimeEditor() {
+    const rowsContainer = panelElemId("peakTimeEditorRows");
+    rowsContainer.innerHTML = "";
+
+    peakTimes.forEach(times => {
+        const start = times[0];
+        const end = times[1];
+        rowsContainer.appendChild(createTimesRow(start, end));
+    });
+}
+function createTimesRow(start, end) {
+    const row = document.createElement("div");
+    row.className = "settings-editor-row";
+    row.appendChild(createTimeInput(start, "start"));
+    row.appendChild(createTimeInput(end, "end"));
+
+    return row;
+}
+function createTimeInput(value, field) {
+    const input = document.createElement("input");
+    input.type = "time";
+    // 1:00 does not work, it ABSOLUTELY needs 01:00
+    // ternary for the case of new row.
+    input.value = value ? value.padStart(5,"0") : value;
+    input.dataset.field = field;
+    input.className = "text_pole";
+
+    return input;
+}
+function addTimeRow(){
+    const rowsContainer = panelElemId("peakTimeEditorRows");
+    const row = createTimesRow(0,0);
+    rowsContainer.appendChild(row);
+    row.querySelector("input").focus();
+}
+function showCurrentUTCTime() {
+    const currentTime = new Date();
+    const hour = currentTime.getUTCHours().toString().padStart(2, "0");
+    const minute = currentTime.getUTCMinutes().toString().padStart(2, "0");
+    const formattedTime = `${hour}:${minute}`.padStart(5, "0");
+
+    let msg;
+
+    if (isCurrentTimeInPeakHours()) {
+        msg = `[ ${formattedTime} ] On peak hours. Click to refresh time.`;
+    } else {
+        msg = `[ ${formattedTime} ] Click to refresh time.`;
+    }
+
+    panelElemId("timeInUtcBtn").innerHTML = msg;
+}
+function timeToInt(time) {
+    const splitTime = time.split(":");
+    const hour = parseInt(splitTime[0]);
+    const minute = parseInt(splitTime[1]);
+
+    return (hour * 60) + minute;
+}
+function timeIntToUtc(time) {
+    const minutesInDay = 1440; // 24h * 60m
+    const localWithOffset = timeToInt(time) + UTC_MINUTE_OFFSET;
+
+    // I don't like how this formula looks, but it works.
+    return ((localWithOffset % minutesInDay) + minutesInDay) % minutesInDay;
+}
+function isTimeTargetBetween(start, end, value) {
+    if (start > end) {
+        return start <= value || end >= value;
+    } else {
+        return start <= value && end >= value;
+    }
+}
+function isCurrentTimeInPeakHours() {
+    const currentTime = new Date();
+    const hour = currentTime.getUTCHours();
+    const minute = currentTime.getUTCMinutes();
+    const currentTimeUTC = timeToInt(`${hour}:${minute}`);
+
+    return peakTimes.some(times => {
+        const start = timeToInt(times[0]);
+        const end = timeToInt(times[1]);
+        return isTimeTargetBetween(start, end, currentTimeUTC);
+    });
 }
 
 function showLastOnMessage({ modelName, tokens, ratio }) {
@@ -667,6 +806,7 @@ jQuery(async () => {
     overrideFetch();
 
     deepseekCost = fetchDeepSeekCostFromLocalStorage();
+    peakTimes = fetchPeakTimesFromLocalStorage();
 
     Object.keys(deepseekCost).forEach(modelName => {
         accumulatedUsage.models[modelName] = structuredClone(Usage);
@@ -682,10 +822,17 @@ jQuery(async () => {
     updateNonLastStatsOnPanel("lifetime");
 
     populateModelSelector();
-    populatePriceEditor();
     panelElemId("modelSelector").addEventListener("change", modelDropdownChange);
+
+    populatePriceEditor();
     panelElemId("priceEditorRows").addEventListener("input", savePriceEditorDebounced);
     panelElemId("addModelBtn").addEventListener("click", addModelRow);
+
+    populatePeakTimeEditor();
+    panelElemId("peakTimeEditorRows").addEventListener("input", savePeakTimeEditorDebounced);
+    panelElemId("timeInUtcBtn").addEventListener("click", showCurrentUTCTime);
+    panelElemId("addPeakTimeBtn").addEventListener("click", addTimeRow);
+    showCurrentUTCTime();
 
     log("Extension loaded!");
 });
