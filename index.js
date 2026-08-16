@@ -82,20 +82,23 @@ function debounce(func, timeout = 300){
     };
 }
 
-// Hard coded for now.
-// What are these names
-function fetchLifetimeUsageFromLocalStorage() {
-    log("Fetching localStorage for saved stats.");
-
-    const raw = localStorage.getItem(`${EXT_PREFIX}lifetimeUsage`);
+function fetchFromLocalStorage(key, defaultValue) {
+    const raw = localStorage.getItem(`${EXT_PREFIX}${key}`);
     let data;
 
     if (!raw) {
-        log.warn("No lifetime stats saved.")
-        data = structuredClone(accumulatedUsage);
+        log.warn(`No ${key} stats saved.`)
+        data = structuredClone(defaultValue);
     } else {
         data = JSON.parse(raw);
     }
+
+    return data;
+}
+function fetchLifetimeUsageFromLocalStorage() {
+    log("Fetching localStorage for saved stats.");
+
+    let data = fetchFromLocalStorage("lifetimeUsage", accumulatedUsage);
 
     Object.keys(deepseekCost).forEach(modelName => {
         if (!data.models[modelName]) {
@@ -117,15 +120,7 @@ function saveLifetimeUsageToLocalStorage() {
 function fetchDeepSeekCostFromLocalStorage() {
     log("Fetching localStorage for saved prices.");
 
-    const raw = localStorage.getItem(`${EXT_PREFIX}deepseekCost`);
-    let data;
-
-    if (!raw) {
-        log.warn("No price data saved.")
-        data = structuredClone(DEFAULT_DEEPSEEK_COST);
-    } else {
-        data = JSON.parse(raw);
-    }
+    let data = fetchFromLocalStorage("deepseekCost", DEFAULT_DEEPSEEK_COST);
 
     Object.keys(DEFAULT_DEEPSEEK_COST).forEach(modelName => {
         if (!data[modelName]) {
@@ -148,15 +143,7 @@ function saveDeepSeekCostToLocalStorage() {
 function fetchPeakTimesFromLocalStorage() {
     log("Fetching localStorage for saved times.");
 
-    const raw = localStorage.getItem(`${EXT_PREFIX}deepseekPeakTimes`);
-    let data;
-
-    if (!raw) {
-        log.warn("No time data saved.")
-        data = structuredClone(DEFAULT_PEAK_TIMES);
-    } else {
-        data = JSON.parse(raw);
-    }
+    let data = fetchFromLocalStorage("deepseekPeakTimes", DEFAULT_PEAK_TIMES);
 
     return data;
 }
