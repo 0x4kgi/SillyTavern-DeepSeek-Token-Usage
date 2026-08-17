@@ -740,11 +740,14 @@ function showCurrentUTCTime() {
     const hour = currentTime.getUTCHours().toString().padStart(2, "0");
     const minute = currentTime.getUTCMinutes().toString().padStart(2, "0");
     const formattedTime = `${hour}:${minute}`;
+    const activePeakHours = getActivatedPeakHours();
 
     let msg;
 
-    if (isCurrentTimeInPeakHours()) {
-        msg = `[ ${formattedTime} ] On peak hours. Click to refresh time.`;
+    if (activePeakHours) {
+        const firstPeakHours = activePeakHours[0];
+        const timeLeft = timeToInt(firstPeakHours[1]) - timeToInt(formattedTime);
+        msg = `[ ${formattedTime} ] On peak hours! ${timeLeft} minutes left.`;
     } else {
         msg = `[ ${formattedTime} ] Click to refresh time.`;
     }
@@ -765,17 +768,21 @@ function isTimeTargetBetween(start, end, value) {
         return start <= value && end >= value;
     }
 }
-function isCurrentTimeInPeakHours() {
+function getActivatedPeakHours() {
     const currentTime = new Date();
     const hour = currentTime.getUTCHours();
     const minute = currentTime.getUTCMinutes();
     const currentTimeUTC = timeToInt(`${hour}:${minute}`);
 
-    return peakTimes.some(times => {
+    const filtered = peakTimes.filter(times => {
         const start = timeToInt(times[0]);
         const end = timeToInt(times[1]);
         return isTimeTargetBetween(start, end, currentTimeUTC);
     });
+
+    // Returning an empty array is true for some reason?
+    // Might as well do this instead for safety.
+    return filtered.length > 0 ? filtered : false;
 }
 
 function showLastOnMessage({ modelName, tokens, ratio }) {
