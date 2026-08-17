@@ -772,7 +772,7 @@ function showCurrentUTCTime() {
 
     if (activePeakHours.length) {
         const firstPeakHours = activePeakHours[0];
-        const timeLeft = timeToInt(firstPeakHours[1]) - timeToInt(formattedTime);
+        let timeLeft = timeToInt(firstPeakHours[1]) - timeToInt(formattedTime);
         if (timeLeft < 0) timeLeft += 1440; // 24h * 60m
 
         msg = `[ ${formattedTime} ] On peak hours! ${timeLeft} minute${ timeLeft == 1 ? "" : "s" } left.`;
