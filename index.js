@@ -389,7 +389,7 @@ function processUsageData(usage, model) {
     const activePeakHours = getActivatedPeakHours();
 
     const tokens = parseUsageObject(usage);
-    const extra = activePeakHours ? structuredClone(tokens) : structuredClone(Statistic);
+    const extra = activePeakHours.length ? structuredClone(tokens) : structuredClone(Statistic);
 
     saveAggregatedUsage(sessionUsage, tokens, model, activePeakHours);
     saveAggregatedUsage(lifetimeUsage, tokens, model, activePeakHours);
