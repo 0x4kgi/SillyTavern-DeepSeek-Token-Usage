@@ -414,6 +414,8 @@ function processUsageData(usage, model) {
  */
 function getAllModelStats(source) {
     let accumulated = structuredClone(Usage);
+    accumulated.cost ??= structuredClone(Statistic);
+    accumulated.extraCost ??= structuredClone(Statistic);
 
     Object.keys(source.models).forEach(modelName => {
         const modelStats = source.models[modelName];
@@ -423,10 +425,10 @@ function getAllModelStats(source) {
 
         const tokenCost = calculateTokenCost(modelStats.tokens, modelName);
         const extraCost = calculateTokenCost(modelStats.extra, modelName);
-        accumulated.cost ??= structuredClone(Statistic);
 
         Object.keys(tokenCost).forEach(param => {
-            accumulated.cost[param] += (tokenCost[param] + extraCost[param]);
+            accumulated.cost[param] += tokenCost[param];
+            accumulated.extraCost[param] += extraCost[param];
         });
     });
 
@@ -501,10 +503,7 @@ function updateNonLastStatsOnPanel(statType = "session") {
 
     if (selectedModel === "all") {
         stat = getAllModelStats(sourceStat);
-        // stat.cost is handled by the function above
-        // stat.extraCost is needed here since its already added above
-        // just here for safety, lol
-        stat.extraCost = structuredClone(Statistic);
+        // stat.cost and stat.extraCost is handled by the function above
     } else {
         stat = sourceStat.models[selectedModel] || structuredClone(Usage);
         stat.cost = calculateTokenCost(stat.tokens, selectedModel);
