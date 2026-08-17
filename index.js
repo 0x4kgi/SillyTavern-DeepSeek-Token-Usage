@@ -482,9 +482,9 @@ function updateNonLastStatsOnPanel(statType = "session") {
     const selectedModel = panelElemId("modelSelector").value;
 
     if (statType === "session") {
-        sourceStat = sessionUsage;
+        sourceStat = structuredClone(sessionUsage);
     } else if (statType === "lifetime") {
-        sourceStat = lifetimeUsage;
+        sourceStat = structuredClone(lifetimeUsage);
     } else {
         log.warn("Not valid statType:", statType);
         return;
