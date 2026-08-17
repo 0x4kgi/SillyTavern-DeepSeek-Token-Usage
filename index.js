@@ -360,10 +360,8 @@ function calculateTokenCost(tokens, modelName) {
  * @param {Statistic} tokens
  * @param {string} model
  */
-function saveAggregatedUsage(usageLog, tokens, model) {
+function saveAggregatedUsage(usageLog, tokens, model, activePeakHours = false) {
     let modelObject = usageLog.models[model] || structuredClone(Usage);
-
-    const activePeakHours = getActivatedPeakHours();
 
     modelObject.model = model;
     modelObject.timestamp = Date.now();
@@ -382,17 +380,22 @@ function saveAggregatedUsage(usageLog, tokens, model) {
 
 function processUsageData(usage, model) {
     if (!usage) return;
-
     log("Processing Usage data for display.");
+
+    const activePeakHours = getActivatedPeakHours();
+
     const tokens = parseUsageObject(usage);
-    saveAggregatedUsage(sessionUsage, tokens, model);
-    saveAggregatedUsage(lifetimeUsage, tokens, model);
+    const extra = activePeakHours ? structuredClone(tokens) : structuredClone(Statistic);
+
+    saveAggregatedUsage(sessionUsage, tokens, model, activePeakHours);
+    saveAggregatedUsage(lifetimeUsage, tokens, model, activePeakHours);
 
     sessionLog.push({
         model: model,
         timestamp: Date.now(),
         count: 1,
         tokens: { ...tokens },
+        extra: { ...extra },
     });
 
     saveLifetimeUsageToLocalStorage();
