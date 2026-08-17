@@ -111,7 +111,7 @@ function fetchLifetimeUsageFromLocalStorage() {
         }
 
         // Migration from old data without *.extra
-        data.models[modelName].extra ??= structuredClone(Usage);
+        data.models[modelName].extra ??= structuredClone(Statistic);
     });
 
     return data;
