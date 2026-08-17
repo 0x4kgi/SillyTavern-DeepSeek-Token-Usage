@@ -362,8 +362,9 @@ function calculateTokenCost(tokens, modelName) {
  * @param {accumulatedUsage} usageLog
  * @param {Statistic} tokens
  * @param {string} model
+ * @param {array} activePeakHours
  */
-function saveAggregatedUsage(usageLog, tokens, model, activePeakHours = false) {
+function saveAggregatedUsage(usageLog, tokens, model, activePeakHours) {
     let modelObject = usageLog.models[model] || structuredClone(Usage);
 
     modelObject.model = model;
@@ -372,7 +373,7 @@ function saveAggregatedUsage(usageLog, tokens, model, activePeakHours = false) {
 
     Object.keys(tokens).forEach(parameter => {
         modelObject.tokens[parameter] += tokens[parameter];
-        if (activePeakHours) {
+        if (activePeakHours.length) {
             modelObject.extra[parameter] += tokens[parameter];
         }
     });
@@ -770,7 +771,7 @@ function showCurrentUTCTime() {
 
     let msg;
 
-    if (activePeakHours) {
+    if (activePeakHours.length) {
         const firstPeakHours = activePeakHours[0];
         const timeLeft = timeToInt(firstPeakHours[1]) - timeToInt(formattedTime);
         msg = `[ ${formattedTime} ] On peak hours! ${timeLeft} minutes left.`;
@@ -800,15 +801,11 @@ function getActivatedPeakHours() {
     const minute = currentTime.getUTCMinutes();
     const currentTimeUTC = timeToInt(`${hour}:${minute}`);
 
-    const filtered = peakTimes.filter(times => {
+    return peakTimes.filter(times => {
         const start = timeToInt(times[0]);
         const end = timeToInt(times[1]);
         return isTimeTargetBetween(start, end, currentTimeUTC);
     });
-
-    // Returning an empty array is true for some reason?
-    // Might as well do this instead for safety.
-    return filtered.length > 0 ? filtered : false;
 }
 
 function showLastOnMessage({ modelName, tokens, ratio }) {
