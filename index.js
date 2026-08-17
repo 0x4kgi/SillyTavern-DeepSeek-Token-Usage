@@ -109,8 +109,11 @@ function fetchLifetimeUsageFromLocalStorage() {
         if (!data.models[modelName]) {
             data.models[modelName] = structuredClone(Usage);
         }
+    });
 
-        // Migration from old data without *.extra
+    // Migration from old data.
+    // New fields must go here, refer to <Usage>
+    Object.keys(data.models).forEach(modelName => {
         data.models[modelName].extra ??= structuredClone(Statistic);
     });
 
