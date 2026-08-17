@@ -46,6 +46,7 @@ const Usage = {
     timestamp: 0,
     count: 0,
     tokens: structuredClone(Statistic),
+    extra: structuredClone(Statistic),
 };
 
 let accumulatedUsage = {
@@ -108,6 +109,9 @@ function fetchLifetimeUsageFromLocalStorage() {
         if (!data.models[modelName]) {
             data.models[modelName] = structuredClone(Usage);
         }
+
+        // Migration from old data without *.extra
+        data.models[modelName].extra ??= structuredClone(Usage);
     });
 
     return data;
@@ -327,8 +331,8 @@ function parseUsageObject(usage) {
 function calculateTokenCost(tokens, modelName) {
     const tokenPrice = deepseekCost[modelName];
 
-    if (!tokenPrice) {
-        return DEFAULT_COST;
+    if (!tokens || !tokenPrice) {
+        return structuredClone(Statistic);
     }
 
     const cacheHitCost = tokenPrice.cached / 1_000_000;
@@ -359,12 +363,17 @@ function calculateTokenCost(tokens, modelName) {
 function saveAggregatedUsage(usageLog, tokens, model) {
     let modelObject = usageLog.models[model] || structuredClone(Usage);
 
+    const activePeakHours = getActivatedPeakHours();
+
     modelObject.model = model;
     modelObject.timestamp = Date.now();
     modelObject.count += 1;
 
     Object.keys(tokens).forEach(parameter => {
         modelObject.tokens[parameter] += tokens[parameter];
+        if (activePeakHours) {
+            modelObject.extra[parameter] += tokens[parameter];
+        }
     });
 
     usageLog.requestCount += 1;
@@ -406,10 +415,11 @@ function getAllModelStats(source) {
         });
 
         const tokenCost = calculateTokenCost(modelStats.tokens, modelName);
+        const extraCost = calculateTokenCost(modelStats.extra, modelName);
         accumulated.cost ??= structuredClone(Statistic);
 
         Object.keys(tokenCost).forEach(param => {
-            accumulated.cost[param] += tokenCost[param];
+            accumulated.cost[param] += (tokenCost[param] + extraCost[param]);
         });
     });
 
@@ -420,7 +430,9 @@ function updateLastGenerationStats() {
     const selectedModel = panelElemId("modelSelector").value;
 
     let tokens;
+    let extra;
     let tokenCost;
+    let extraCost;
     let modelName;
     let lastLog;
 
@@ -434,17 +446,20 @@ function updateLastGenerationStats() {
     }
 
     tokens = lastLog ? lastLog.tokens : structuredClone(Statistic);
-    tokenCost = lastLog ? calculateTokenCost(tokens, modelName) : structuredClone(Statistic);
+    extra = lastLog ? lastLog.extra : structuredClone(Statistic);
+    tokenCost = calculateTokenCost(tokens, modelName);
+    extraCost = calculateTokenCost(extra, modelName);
 
     const ratio = tokens.prompt > 0 ?
         (tokens.cacheHit / tokens.prompt) * 100
         : 0;
+    const displayTotalCost = tokenCost.total + extraCost.total;
 
     // Last Message
     panelElemText('prompt', tokens.prompt);
     panelElemText('completion', tokens.completion);
     panelElemText('total', tokens.total);
-    panelElemText('totalCost', tokenCost.total.toFixed(5));
+    panelElemText('totalCost', displayTotalCost.toFixed(5));
 
     panelElemText('reasoning', tokens.reasoning);
     panelElemText('response', tokens.response);
@@ -480,20 +495,25 @@ function updateNonLastStatsOnPanel(statType = "session") {
     if (selectedModel === "all") {
         stat = getAllModelStats(sourceStat);
         // stat.cost is handled by the function above
+        // stat.extraCost is needed here since its already added above
+        // just here for safety, lol
+        stat.extraCost = structuredClone(Statistic);
     } else {
         stat = sourceStat.models[selectedModel] || structuredClone(Usage);
         stat.cost = calculateTokenCost(stat.tokens, selectedModel);
+        stat.extraCost = calculateTokenCost(stat.extra, selectedModel);
         requestCount = stat.count; // override when specific model, ig.
     }
 
     const ratio = stat.tokens.prompt > 0 ?
         (stat.tokens.cacheHit / stat.tokens.prompt) * 100
         : 0;
+    const totalCost = stat.cost.total + stat.extraCost.total;
 
     panelElemText(`${statType}_prompt`, stat.tokens.prompt);
     panelElemText(`${statType}_completion`, stat.tokens.completion);
     panelElemText(`${statType}_total`, stat.tokens.total);
-    panelElemText(`${statType}_totalCost`, `${stat.cost.total.toFixed(5)}`);
+    panelElemText(`${statType}_totalCost`, `${totalCost.toFixed(5)}`);
 
     panelElemText(`${statType}_reasoning`, stat.tokens.reasoning);
     panelElemText(`${statType}_response`, stat.tokens.response);
