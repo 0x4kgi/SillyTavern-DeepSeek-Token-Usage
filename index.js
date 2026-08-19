@@ -7,14 +7,14 @@ const EXT_PREFIX = "ds-token--";
 // https://api-docs.deepseek.com/quick_start/pricing
 const DEFAULT_DEEPSEEK_COST = {
     "deepseek-v4-flash": {
-        in: 0.14,
-        cached: 0.0028,
-        out: 0.28,
+        in: 0.22,
+        cached: 0.007,
+        out: 0.66,
     },
     "deepseek-v4-pro": {
-        in: 0.435,
-        cached: 0.003625,
-        out: 0.87,
+        in: 0.66,
+        cached: 0.022,
+        out: 1.98,
     },
 };
 const DEFAULT_COST = {
