@@ -723,7 +723,7 @@ function savePeakTimeEditor() {
     peakTimes = newTimes;
 
     savePeakTimesToLocalStorageDebounced();
-    showCurrentUTCTime();
+    updatePeakTimeIndicators();
     renderUIDebounced();
 }
 function populatePeakTimeEditor() {
@@ -761,12 +761,22 @@ function addTimeRow() {
     rowsContainer.appendChild(row);
     row.querySelector("input").focus();
 }
-function showCurrentUTCTime() {
+function updatePeakTimeIndicators() {
+    const activePeakHours = getActivatedPeakHours();
+
+    showPeakTimeInTitleBadge(activePeakHours);
+    showCurrentUTCTime(activePeakHours);
+}
+function showPeakTimeInTitleBadge(activePeakHours) {
+    const icon = panelElemId("header-badge");
+
+    icon.style.color = activePeakHours.length ? "orange" : "green";
+}
+function showCurrentUTCTime(activePeakHours) {
     const currentTime = new Date();
     const hour = currentTime.getUTCHours().toString().padStart(2, "0");
     const minute = currentTime.getUTCMinutes().toString().padStart(2, "0");
     const formattedTime = `${hour}:${minute}`;
-    const activePeakHours = getActivatedPeakHours();
 
     let msg;
 
@@ -862,8 +872,8 @@ jQuery(async () => {
     panelElemId("peakTimeEditorRows").addEventListener("input", savePeakTimeEditorDebounced);
     panelElemId("timeInUtcBtn").addEventListener("click", showCurrentUTCTime);
     panelElemId("addPeakTimeBtn").addEventListener("click", addTimeRow);
-    showCurrentUTCTime();
-    setInterval(showCurrentUTCTime, 30000);
+    updatePeakTimeIndicators();
+    setInterval(updatePeakTimeIndicators, 30000);
 
     log("Extension loaded!");
 });
