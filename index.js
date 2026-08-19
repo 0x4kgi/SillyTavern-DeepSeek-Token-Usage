@@ -435,6 +435,10 @@ function getAllModelStats(source) {
     return accumulated;
 }
 
+function numberComma(number) {
+    return number.toLocaleString();
+}
+
 function updateLastGenerationStats() {
     const selectedModel = panelElemId("modelSelector").value;
 
@@ -465,16 +469,16 @@ function updateLastGenerationStats() {
     const displayTotalCost = tokenCost.total + extraCost.total;
 
     // Last Message
-    panelElemText('prompt', tokens.prompt);
-    panelElemText('completion', tokens.completion);
-    panelElemText('total', tokens.total);
+    panelElemText('prompt', numberComma(tokens.prompt));
+    panelElemText('completion', numberComma(tokens.completion));
+    panelElemText('total', numberComma(tokens.total));
     panelElemText('totalCost', displayTotalCost.toFixed(5));
 
-    panelElemText('reasoning', tokens.reasoning);
-    panelElemText('response', tokens.response);
+    panelElemText('reasoning', numberComma(tokens.reasoning));
+    panelElemText('response', numberComma(tokens.response));
 
-    panelElemText('cacheHit', tokens.cacheHit);
-    panelElemText('cacheMiss', tokens.cacheMiss);
+    panelElemText('cacheHit', numberComma(tokens.cacheHit));
+    panelElemText('cacheMiss', numberComma(tokens.cacheMiss));
     panelElemId('ratio').value = ratio;
     panelElemText('model', modelName);
 
@@ -516,19 +520,19 @@ function updateNonLastStatsOnPanel(statType = "session") {
         : 0;
     const totalCost = stat.cost.total + stat.extraCost.total;
 
-    panelElemText(`${statType}_prompt`, stat.tokens.prompt);
-    panelElemText(`${statType}_completion`, stat.tokens.completion);
-    panelElemText(`${statType}_total`, stat.tokens.total);
+    panelElemText(`${statType}_prompt`, numberComma(stat.tokens.prompt));
+    panelElemText(`${statType}_completion`, numberComma(stat.tokens.completion));
+    panelElemText(`${statType}_total`, numberComma(stat.tokens.total));
     panelElemText(`${statType}_totalCost`, `${totalCost.toFixed(5)}`);
 
-    panelElemText(`${statType}_reasoning`, stat.tokens.reasoning);
-    panelElemText(`${statType}_response`, stat.tokens.response);
+    panelElemText(`${statType}_reasoning`, numberComma(stat.tokens.reasoning));
+    panelElemText(`${statType}_response`, numberComma(stat.tokens.response));
 
-    panelElemText(`${statType}_cacheHit`, stat.tokens.cacheHit);
-    panelElemText(`${statType}_cacheMiss`, stat.tokens.cacheMiss);
+    panelElemText(`${statType}_cacheHit`, numberComma(stat.tokens.cacheHit));
+    panelElemText(`${statType}_cacheMiss`, numberComma(stat.tokens.cacheMiss));
 
     panelElemId(`${statType}_ratio`).value = ratio;
-    panelElemText(`${statType}_requestCount`, requestCount);
+    panelElemText(`${statType}_requestCount`, numberComma(requestCount));
 }
 function updateSessionLogBarChart() {
     const chart = panelElemId("session_chart");
@@ -839,7 +843,10 @@ function showLastOnMessage({ modelName, tokens, ratio }) {
         statBlock.parentNode.appendChild(statBlock);
     }
 
-    statBlock.textContent = `${modelName}: ${tokens.prompt} → ${tokens.completion} (${ratio.toFixed(1)}%)`;
+    const inTokens = numberComma(tokens.prompt);
+    const outTokens = numberComma(tokens.completion);
+
+    statBlock.textContent = `${modelName}: ${inTokens} → ${outTokens} (${ratio.toFixed(1)}%)`;
 }
 
 jQuery(async () => {
