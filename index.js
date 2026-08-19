@@ -7,14 +7,14 @@ const EXT_PREFIX = "ds-token--";
 // https://api-docs.deepseek.com/quick_start/pricing
 const DEFAULT_DEEPSEEK_COST = {
     "deepseek-v4-flash": {
-        in: 0.14,
-        cached: 0.0028,
-        out: 0.28,
+        in: 0.22,
+        cached: 0.007,
+        out: 0.66,
     },
     "deepseek-v4-pro": {
-        in: 0.435,
-        cached: 0.003625,
-        out: 0.87,
+        in: 0.66,
+        cached: 0.022,
+        out: 1.98,
     },
 };
 const DEFAULT_COST = {
@@ -22,9 +22,15 @@ const DEFAULT_COST = {
     cached: 0.0,
     out: 0.0,
 };
+const DEFAULT_PEAK_TIMES = [
+    // UTC times
+    ["01:00", "04:00"],
+    ["06:00", "10:00"],
+];
 
 /** @type {Object<string, DEFAULT_COST>} */
 let deepseekCost = {};
+let peakTimes = [];
 
 const Statistic = {
     prompt: 0,
@@ -40,6 +46,7 @@ const Usage = {
     timestamp: 0,
     count: 0,
     tokens: structuredClone(Statistic),
+    extra: structuredClone(Statistic),
 };
 
 let accumulatedUsage = {
@@ -75,25 +82,39 @@ function debounce(func, timeout = 300){
     };
 }
 
-// Hard coded for now.
-// What are these names
-function fetchLifetimeUsageFromLocalStorage() {
-    log("Fetching localStorage for saved stats.");
-
-    const raw = localStorage.getItem(`${EXT_PREFIX}lifetimeUsage`);
+function fetchFromLocalStorage(key, defaultValue) {
+    const raw = localStorage.getItem(`${EXT_PREFIX}${key}`);
     let data;
 
     if (!raw) {
-        log.warn("No lifetime stats saved.")
-        data = structuredClone(accumulatedUsage);
+        log.warn(`No ${key} stats saved.`)
+        data = structuredClone(defaultValue);
     } else {
-        data = JSON.parse(raw);
+        try {
+            data = JSON.parse(raw);
+        } catch (error) {
+            log.warn(`Corrupt ${key} stats, using defaults.`, error);
+            data = structuredClone(defaultValue);
+        }
     }
+
+    return data;
+}
+function fetchLifetimeUsageFromLocalStorage() {
+    log("Fetching localStorage for saved stats.");
+
+    let data = fetchFromLocalStorage("lifetimeUsage", accumulatedUsage);
 
     Object.keys(deepseekCost).forEach(modelName => {
         if (!data.models[modelName]) {
             data.models[modelName] = structuredClone(Usage);
         }
+    });
+
+    // Migration from old data.
+    // New fields must go here, refer to <Usage>
+    Object.keys(data.models).forEach(modelName => {
+        data.models[modelName].extra ??= structuredClone(Statistic);
     });
 
     return data;
@@ -110,15 +131,7 @@ function saveLifetimeUsageToLocalStorage() {
 function fetchDeepSeekCostFromLocalStorage() {
     log("Fetching localStorage for saved prices.");
 
-    const raw = localStorage.getItem(`${EXT_PREFIX}deepseekCost`);
-    let data;
-
-    if (!raw) {
-        log.warn("No price data saved.")
-        data = structuredClone(DEFAULT_DEEPSEEK_COST);
-    } else {
-        data = JSON.parse(raw);
-    }
+    let data = fetchFromLocalStorage("deepseekCost", DEFAULT_DEEPSEEK_COST);
 
     Object.keys(DEFAULT_DEEPSEEK_COST).forEach(modelName => {
         if (!data[modelName]) {
@@ -137,6 +150,38 @@ function saveDeepSeekCostToLocalStorage() {
     log("What to save: ", _deepSeekCost);
 
     localStorage.setItem(`${EXT_PREFIX}deepseekCost`, JSON.stringify(_deepSeekCost));
+}
+function fetchPeakTimesFromLocalStorage() {
+    log("Fetching localStorage for saved times.");
+
+    let data = fetchFromLocalStorage("deepseekPeakTimes", DEFAULT_PEAK_TIMES);
+
+    if (!Array.isArray(data)) {
+        log.warn("Saved peak times are not an array, using defaults.");
+        return structuredClone(DEFAULT_PEAK_TIMES);
+    }
+
+    data = data.filter(isValidPeakTime);
+
+    return data;
+}
+function isValidPeakTime(times) {
+    if (!Array.isArray(times) || times.length < 2) return false;
+
+    const [start, end] = times;
+    if (typeof start !== "string" || typeof end !== "string") return false;
+
+    return !Number.isNaN(timeToInt(start)) && !Number.isNaN(timeToInt(end));
+}
+const savePeakTimesToLocalStorageDebounced = debounce(savePeakTimesToLocalStorage, 1000);
+function savePeakTimesToLocalStorage() {
+    log("Saving peakTimes.");
+
+    let _peakTimes = structuredClone(peakTimes);
+
+    log("What to save: ", _peakTimes);
+
+    localStorage.setItem(`${EXT_PREFIX}deepseekPeakTimes`, JSON.stringify(_peakTimes));
 }
 
 function overrideFetch() {
@@ -289,8 +334,8 @@ function parseUsageObject(usage) {
 function calculateTokenCost(tokens, modelName) {
     const tokenPrice = deepseekCost[modelName];
 
-    if (!tokenPrice) {
-        return DEFAULT_COST;
+    if (!tokens || !tokenPrice) {
+        return structuredClone(Statistic);
     }
 
     const cacheHitCost = tokenPrice.cached / 1_000_000;
@@ -317,8 +362,9 @@ function calculateTokenCost(tokens, modelName) {
  * @param {accumulatedUsage} usageLog
  * @param {Statistic} tokens
  * @param {string} model
+ * @param {array} activePeakHours
  */
-function saveAggregatedUsage(usageLog, tokens, model) {
+function saveAggregatedUsage(usageLog, tokens, model, activePeakHours) {
     let modelObject = usageLog.models[model] || structuredClone(Usage);
 
     modelObject.model = model;
@@ -327,6 +373,9 @@ function saveAggregatedUsage(usageLog, tokens, model) {
 
     Object.keys(tokens).forEach(parameter => {
         modelObject.tokens[parameter] += tokens[parameter];
+        if (activePeakHours.length) {
+            modelObject.extra[parameter] += tokens[parameter];
+        }
     });
 
     usageLog.requestCount += 1;
@@ -335,17 +384,22 @@ function saveAggregatedUsage(usageLog, tokens, model) {
 
 function processUsageData(usage, model) {
     if (!usage) return;
-
     log("Processing Usage data for display.");
+
+    const activePeakHours = getActivatedPeakHours();
+
     const tokens = parseUsageObject(usage);
-    saveAggregatedUsage(sessionUsage, tokens, model);
-    saveAggregatedUsage(lifetimeUsage, tokens, model);
+    const extra = activePeakHours.length ? structuredClone(tokens) : structuredClone(Statistic);
+
+    saveAggregatedUsage(sessionUsage, tokens, model, activePeakHours);
+    saveAggregatedUsage(lifetimeUsage, tokens, model, activePeakHours);
 
     sessionLog.push({
         model: model,
         timestamp: Date.now(),
         count: 1,
         tokens: { ...tokens },
+        extra: { ...extra },
     });
 
     saveLifetimeUsageToLocalStorage();
@@ -360,6 +414,8 @@ function processUsageData(usage, model) {
  */
 function getAllModelStats(source) {
     let accumulated = structuredClone(Usage);
+    accumulated.cost ??= structuredClone(Statistic);
+    accumulated.extraCost ??= structuredClone(Statistic);
 
     Object.keys(source.models).forEach(modelName => {
         const modelStats = source.models[modelName];
@@ -368,21 +424,28 @@ function getAllModelStats(source) {
         });
 
         const tokenCost = calculateTokenCost(modelStats.tokens, modelName);
-        accumulated.cost ??= structuredClone(Statistic);
+        const extraCost = calculateTokenCost(modelStats.extra, modelName);
 
         Object.keys(tokenCost).forEach(param => {
             accumulated.cost[param] += tokenCost[param];
+            accumulated.extraCost[param] += extraCost[param];
         });
     });
 
     return accumulated;
 }
 
+function numberComma(number) {
+    return number.toLocaleString();
+}
+
 function updateLastGenerationStats() {
     const selectedModel = panelElemId("modelSelector").value;
 
     let tokens;
+    let extra;
     let tokenCost;
+    let extraCost;
     let modelName;
     let lastLog;
 
@@ -396,23 +459,26 @@ function updateLastGenerationStats() {
     }
 
     tokens = lastLog ? lastLog.tokens : structuredClone(Statistic);
-    tokenCost = lastLog ? calculateTokenCost(tokens, modelName) : structuredClone(Statistic);
+    extra = lastLog ? lastLog.extra : structuredClone(Statistic);
+    tokenCost = calculateTokenCost(tokens, modelName);
+    extraCost = calculateTokenCost(extra, modelName);
 
     const ratio = tokens.prompt > 0 ?
         (tokens.cacheHit / tokens.prompt) * 100
         : 0;
+    const displayTotalCost = tokenCost.total + extraCost.total;
 
     // Last Message
-    panelElemText('prompt', tokens.prompt);
-    panelElemText('completion', tokens.completion);
-    panelElemText('total', tokens.total);
-    panelElemText('totalCost', tokenCost.total.toFixed(5));
+    panelElemText('prompt', numberComma(tokens.prompt));
+    panelElemText('completion', numberComma(tokens.completion));
+    panelElemText('total', numberComma(tokens.total));
+    panelElemText('totalCost', displayTotalCost.toFixed(5));
 
-    panelElemText('reasoning', tokens.reasoning);
-    panelElemText('response', tokens.response);
+    panelElemText('reasoning', numberComma(tokens.reasoning));
+    panelElemText('response', numberComma(tokens.response));
 
-    panelElemText('cacheHit', tokens.cacheHit);
-    panelElemText('cacheMiss', tokens.cacheMiss);
+    panelElemText('cacheHit', numberComma(tokens.cacheHit));
+    panelElemText('cacheMiss', numberComma(tokens.cacheMiss));
     panelElemId('ratio').value = ratio;
     panelElemText('model', modelName);
 
@@ -429,9 +495,9 @@ function updateNonLastStatsOnPanel(statType = "session") {
     const selectedModel = panelElemId("modelSelector").value;
 
     if (statType === "session") {
-        sourceStat = sessionUsage;
+        sourceStat = structuredClone(sessionUsage);
     } else if (statType === "lifetime") {
-        sourceStat = lifetimeUsage;
+        sourceStat = structuredClone(lifetimeUsage);
     } else {
         log.warn("Not valid statType:", statType);
         return;
@@ -441,30 +507,32 @@ function updateNonLastStatsOnPanel(statType = "session") {
 
     if (selectedModel === "all") {
         stat = getAllModelStats(sourceStat);
-        // stat.cost is handled by the function above
+        // stat.cost and stat.extraCost is handled by the function above
     } else {
         stat = sourceStat.models[selectedModel] || structuredClone(Usage);
         stat.cost = calculateTokenCost(stat.tokens, selectedModel);
+        stat.extraCost = calculateTokenCost(stat.extra, selectedModel);
         requestCount = stat.count; // override when specific model, ig.
     }
 
     const ratio = stat.tokens.prompt > 0 ?
         (stat.tokens.cacheHit / stat.tokens.prompt) * 100
         : 0;
+    const totalCost = stat.cost.total + stat.extraCost.total;
 
-    panelElemText(`${statType}_prompt`, stat.tokens.prompt);
-    panelElemText(`${statType}_completion`, stat.tokens.completion);
-    panelElemText(`${statType}_total`, stat.tokens.total);
-    panelElemText(`${statType}_totalCost`, `${stat.cost.total.toFixed(5)}`);
+    panelElemText(`${statType}_prompt`, numberComma(stat.tokens.prompt));
+    panelElemText(`${statType}_completion`, numberComma(stat.tokens.completion));
+    panelElemText(`${statType}_total`, numberComma(stat.tokens.total));
+    panelElemText(`${statType}_totalCost`, `${totalCost.toFixed(5)}`);
 
-    panelElemText(`${statType}_reasoning`, stat.tokens.reasoning);
-    panelElemText(`${statType}_response`, stat.tokens.response);
+    panelElemText(`${statType}_reasoning`, numberComma(stat.tokens.reasoning));
+    panelElemText(`${statType}_response`, numberComma(stat.tokens.response));
 
-    panelElemText(`${statType}_cacheHit`, stat.tokens.cacheHit);
-    panelElemText(`${statType}_cacheMiss`, stat.tokens.cacheMiss);
+    panelElemText(`${statType}_cacheHit`, numberComma(stat.tokens.cacheHit));
+    panelElemText(`${statType}_cacheMiss`, numberComma(stat.tokens.cacheMiss));
 
     panelElemId(`${statType}_ratio`).value = ratio;
-    panelElemText(`${statType}_requestCount`, requestCount);
+    panelElemText(`${statType}_requestCount`, numberComma(requestCount));
 }
 function updateSessionLogBarChart() {
     const chart = panelElemId("session_chart");
@@ -577,7 +645,7 @@ const savePriceEditorDebounced = debounce(savePriceEditor, 300);
 function savePriceEditor() {
     log("Saving price editor values.");
 
-    const rows = panelElemId("priceEditorRows").querySelectorAll(".price-editor-row");
+    const rows = panelElemId("priceEditorRows").querySelectorAll(".settings-editor-row");
     const newCosts = {};
 
     rows.forEach(row => {
@@ -613,7 +681,7 @@ function populatePriceEditor() {
 }
 function createPriceRow(modelName, cost) {
     const row = document.createElement("div");
-    row.className = "price-editor-row";
+    row.className = "settings-editor-row";
 
     row.appendChild(createPriceInput("text", "modelName", modelName));
     row.appendChild(createPriceInput("number", "cached", cost.cached));
@@ -640,6 +708,121 @@ function addModelRow() {
     row.querySelector("input").focus();
 }
 
+const savePeakTimeEditorDebounced = debounce(savePeakTimeEditor, 300);
+function savePeakTimeEditor() {
+    log("Saving peak time editor values.");
+
+    const rows = panelElemId("peakTimeEditorRows").querySelectorAll(".settings-editor-row");
+    const newTimes = [];
+
+    rows.forEach(row => {
+        const start = row.querySelector('[data-field="start"]').value;
+        const end = row.querySelector('[data-field="end"]').value;
+
+        if (!start || !end) return;
+
+        newTimes.push([start, end]);
+    });
+
+    peakTimes = newTimes;
+
+    savePeakTimesToLocalStorageDebounced();
+    updatePeakTimeIndicators();
+    renderUIDebounced();
+}
+function populatePeakTimeEditor() {
+    const rowsContainer = panelElemId("peakTimeEditorRows");
+    rowsContainer.innerHTML = "";
+
+    peakTimes.forEach(times => {
+        const start = times[0];
+        const end = times[1];
+        rowsContainer.appendChild(createTimesRow(start, end));
+    });
+}
+function createTimesRow(start, end) {
+    const row = document.createElement("div");
+    row.className = "settings-editor-row";
+    row.appendChild(createTimeInput(start, "start"));
+    row.appendChild(createTimeInput(end, "end"));
+
+    return row;
+}
+function createTimeInput(value, field) {
+    const input = document.createElement("input");
+    input.type = "time";
+    // 1:00 does not work, it ABSOLUTELY needs 01:00
+    // ternary for the case of new row.
+    input.value = value ? value.padStart(5, "0") : "";
+    input.dataset.field = field;
+    input.className = "text_pole";
+
+    return input;
+}
+function addTimeRow() {
+    const rowsContainer = panelElemId("peakTimeEditorRows");
+    const row = createTimesRow("", "");
+    rowsContainer.appendChild(row);
+    row.querySelector("input").focus();
+}
+function updatePeakTimeIndicators() {
+    const activePeakHours = getActivatedPeakHours();
+
+    showPeakTimeInTitleBadge(activePeakHours);
+    showCurrentUTCTime(activePeakHours);
+}
+function showPeakTimeInTitleBadge(activePeakHours) {
+    const icon = panelElemId("header-badge");
+
+    icon.style.color = activePeakHours.length ? "orange" : "green";
+}
+function showCurrentUTCTime(activePeakHours) {
+    const currentTime = new Date();
+    const hour = currentTime.getUTCHours().toString().padStart(2, "0");
+    const minute = currentTime.getUTCMinutes().toString().padStart(2, "0");
+    const formattedTime = `${hour}:${minute}`;
+
+    let msg;
+
+    if (activePeakHours.length) {
+        const firstPeakHours = activePeakHours[0];
+        let timeLeft = timeToInt(firstPeakHours[1]) - timeToInt(formattedTime);
+        if (timeLeft < 0) timeLeft += 1440; // 24h * 60m
+
+        msg = `[ ${formattedTime} ] On peak hours! ${timeLeft} minute${ timeLeft == 1 ? "" : "s" } left.`;
+    } else {
+        msg = `[ ${formattedTime} ] Click to refresh time.`;
+    }
+
+    panelElemId("timeInUtcBtn").innerHTML = msg;
+}
+function timeToInt(time) {
+    const splitTime = time.split(":");
+    const hour = parseInt(splitTime[0]);
+    const minute = parseInt(splitTime[1]);
+
+    return (hour * 60) + minute;
+}
+function isTimeTargetBetween(start, end, value) {
+    if (start > end) {
+        return start <= value || end >= value;
+    } else {
+        return start <= value && end >= value;
+    }
+}
+function getActivatedPeakHours() {
+    const currentTime = new Date();
+    const hour = currentTime.getUTCHours();
+    const minute = currentTime.getUTCMinutes();
+    const currentTimeUTC = timeToInt(`${hour}:${minute}`);
+
+    return peakTimes.filter(times => {
+        const start = timeToInt(times[0]);
+        const end = timeToInt(times[1]);
+        return isTimeTargetBetween(start, end, currentTimeUTC);
+    });
+}
+
 function showLastOnMessage({ modelName, tokens, ratio }) {
     const statBlockElemId = EXT_PREFIX + "last_gen_stat";
 
@@ -660,13 +843,17 @@ function showLastOnMessage({ modelName, tokens, ratio }) {
         statBlock.parentNode.appendChild(statBlock);
     }
 
-    statBlock.textContent = `${modelName}: ${tokens.prompt} → ${tokens.completion} (${ratio.toFixed(1)}%)`;
+    const inTokens = numberComma(tokens.prompt);
+    const outTokens = numberComma(tokens.completion);
+
+    statBlock.textContent = `${modelName}: ${inTokens} → ${outTokens} (${ratio.toFixed(1)}%)`;
 }
 
 jQuery(async () => {
     overrideFetch();
 
     deepseekCost = fetchDeepSeekCostFromLocalStorage();
+    peakTimes = fetchPeakTimesFromLocalStorage();
 
     Object.keys(deepseekCost).forEach(modelName => {
         accumulatedUsage.models[modelName] = structuredClone(Usage);
@@ -682,10 +869,18 @@ jQuery(async () => {
     updateNonLastStatsOnPanel("lifetime");
 
     populateModelSelector();
-    populatePriceEditor();
     panelElemId("modelSelector").addEventListener("change", modelDropdownChange);
+
+    populatePriceEditor();
     panelElemId("priceEditorRows").addEventListener("input", savePriceEditorDebounced);
     panelElemId("addModelBtn").addEventListener("click", addModelRow);
+
+    populatePeakTimeEditor();
+    panelElemId("peakTimeEditorRows").addEventListener("input", savePeakTimeEditorDebounced);
+    panelElemId("timeInUtcBtn").addEventListener("click", showCurrentUTCTime);
+    panelElemId("addPeakTimeBtn").addEventListener("click", addTimeRow);
+    updatePeakTimeIndicators();
+    setInterval(updatePeakTimeIndicators, 30000);
 
     log("Extension loaded!");
 });

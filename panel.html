@@ -1,7 +1,10 @@
 <div class="ds-token-usage-display">
     <div class="inline-drawer">
         <div class="inline-drawer-toggle inline-drawer-header">
-            <b>DeepSeek Token Usage</b>
+            <div>
+                <span id="header-badge" class="fa-solid fa-circle"></span>
+                <b>DeepSeek Token Usage</b>
+            </div>
             <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
         </div>
         <div class="inline-drawer-content">
@@ -74,9 +77,9 @@
                         <small><sub>Overall stats <strong>for this browser</strong>.</sub></small>
                     </div>
                 </fieldset>
-                <details class="price-editor">
+                <details class="settings-editor">
                     <summary>Model Prices</summary>
-                    <div class="price-editor-row price-editor-header">
+                    <div class="settings-editor-row settings-editor-header">
                         <span>Model</span>
                         <span>Cached</span>
                         <span>In</span>
@@ -84,6 +87,20 @@
                     </div>
                     <div id="priceEditorRows"></div>
                     <button id="addModelBtn" type="button" class="menu_button menu_button_icon interactable">+ Add Model</button>
+                </details>
+                <details class="settings-editor">
+                    <summary>
+                        Peak Times (2x cost)
+                    </summary>
+                    <div class="settings-editor-row">
+                        <button id="timeInUtcBtn" type="button" class="menu_button menu_button_icon interactable"></button>
+                    </div>
+                    <div class="settings-editor-row settings-editor-header">
+                        <span>Start (UTC)</span>
+                        <span>End (UTC)</span>
+                    </div>
+                    <div id="peakTimeEditorRows"></div>
+                    <button id="addPeakTimeBtn" type="button" class="menu_button menu_button_icon interactable">+ Add Time</button>
                 </details>
             </div>
             <hr>

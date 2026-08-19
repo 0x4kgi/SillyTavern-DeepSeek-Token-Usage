@@ -8,6 +8,8 @@
 
 Shows the token usage that is returned by DeepSeek's API in a convenient(-ish) way.
 
+(New): Added price and peak time editors. Still can't delete anything, though. lol.
+
 ## Installation and Usage
 
 ### Installation
@@ -38,7 +40,7 @@ This extension is written with the DeepSeek's API in mind. **Will not work with 
 
 **Use DeepSeek's connection profile! Custom WILL NOT WORK!**
 
-But if I decide to remove this restriction, the streaming response shoule have `usage` field on it: 
+But if I decide to remove this restriction, the streaming response should have `usage` field on it: 
 
 ```json
 "usage": {
@@ -58,7 +60,7 @@ But if I decide to remove this restriction, the streaming response shoule have `
 
 ## AI Disclosure
 
-Initially vibe coded with Google Gemini. Then some code review and guided vibe code with DeepSeek V4 Pro Max.
+Initially vibe coded with Google Gemini. Then some code review and guided vibe code with DeepSeek V4 Pro Max/V4 Flash-0731. All code is read by me.
 
 ## Special Thanks
 
