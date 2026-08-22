@@ -91,6 +91,26 @@
         flex-grow: 1;
         min-width: 0;
     }
+
+    .weekday-row {
+        align-items: center;
+    }
+
+    .weekday-label {
+        flex-grow: 0;
+        min-width: 30px;
+        font-size: smaller;
+    }
+
+    .weekday-btn {
+        flex-grow: 1;
+        min-width: 0;
+        padding: 2px 0;
+    }
+
+    .peak-time-entry:not(:first-child) {
+        border-top: 1px solid rgba(255,255,255,0.05);
+    }
 }
 
 #ds-token--last_gen_stat {

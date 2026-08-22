@@ -22,10 +22,21 @@ const DEFAULT_COST = {
     cached: 0.0,
     out: 0.0,
 };
+const PEAK_WEEKDAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+// Fallback weekdays, also used when migrating old saved data.
+const DEFAULT_PEAK_WEEKDAYS = {
+    sun: true,
+    mon: true,
+    tue: true,
+    wed: true,
+    thu: true,
+    fri: true,
+    sat: true,
+};
 const DEFAULT_PEAK_TIMES = [
-    // UTC times
-    ["01:00", "04:00"],
-    ["06:00", "10:00"],
+    // UTC times. DeepSeek: off-peak rates apply all day on weekends (Sat/Sun).
+    { start: "01:00", end: "04:00", weekdays: { sun: false, mon: true, tue: true, wed: true, thu: true, fri: true, sat: false } },
+    { start: "06:00", end: "10:00", weekdays: { sun: false, mon: true, tue: true, wed: true, thu: true, fri: true, sat: false } },
 ];
 
 /** @type {Object<string, DEFAULT_COST>} */
@@ -161,17 +172,41 @@ function fetchPeakTimesFromLocalStorage() {
         return structuredClone(DEFAULT_PEAK_TIMES);
     }
 
-    data = data.filter(isValidPeakTime);
+    data = data.map(normalizePeakTime).filter(Boolean);
 
     return data;
 }
-function isValidPeakTime(times) {
-    if (!Array.isArray(times) || times.length < 2) return false;
+/**
+ * Accepts both the old [start, end] array format and the new { start, end, weekdays } object format.
+ * Old arrays migrate to every-day weekdays to keep the previous behavior.
+ *
+ * @param {any} entry
+ * @returns {{ start: string, end: string, weekdays: Object } | null}
+ */
+function normalizePeakTime(entry) {
+    let start;
+    let end;
+    let weekdays;
 
-    const [start, end] = times;
-    if (typeof start !== "string" || typeof end !== "string") return false;
+    if (Array.isArray(entry)) {
+        [start, end] = entry;
+        weekdays = structuredClone(DEFAULT_PEAK_WEEKDAYS);
+    } else if (entry && typeof entry === "object") {
+        start = entry.start;
+        end = entry.end;
+        weekdays = { ...DEFAULT_PEAK_WEEKDAYS, ...entry.weekdays };
+    } else {
+        return null;
+    }
 
-    return !Number.isNaN(timeToInt(start)) && !Number.isNaN(timeToInt(end));
+    if (typeof start !== "string" || typeof end !== "string") return null;
+    if (Number.isNaN(timeToInt(start)) || Number.isNaN(timeToInt(end))) return null;
+
+    PEAK_WEEKDAY_KEYS.forEach(day => {
+        weekdays[day] = weekdays[day] === true;
+    });
+
+    return { start, end, weekdays };
 }
 const savePeakTimesToLocalStorageDebounced = debounce(savePeakTimesToLocalStorage, 1000);
 function savePeakTimesToLocalStorage() {
@@ -712,16 +747,21 @@ const savePeakTimeEditorDebounced = debounce(savePeakTimeEditor, 300);
 function savePeakTimeEditor() {
     log("Saving peak time editor values.");
 
-    const rows = panelElemId("peakTimeEditorRows").querySelectorAll(".settings-editor-row");
+    const entries = panelElemId("peakTimeEditorRows").querySelectorAll(".peak-time-entry");
     const newTimes = [];
 
-    rows.forEach(row => {
-        const start = row.querySelector('[data-field="start"]').value;
-        const end = row.querySelector('[data-field="end"]').value;
+    entries.forEach(entry => {
+        const start = entry.querySelector('[data-field="start"]').value;
+        const end = entry.querySelector('[data-field="end"]').value;
 
         if (!start || !end) return;
 
-        newTimes.push([start, end]);
+        const weekdays = {};
+        entry.querySelectorAll('[data-day]').forEach(button => {
+            weekdays[button.dataset.day] = button.classList.contains("active");
+        });
+
+        newTimes.push({ start, end, weekdays });
     });
 
     peakTimes = newTimes;
@@ -734,19 +774,47 @@ function populatePeakTimeEditor() {
     const rowsContainer = panelElemId("peakTimeEditorRows");
     rowsContainer.innerHTML = "";
 
-    peakTimes.forEach(times => {
-        const start = times[0];
-        const end = times[1];
-        rowsContainer.appendChild(createTimesRow(start, end));
+    peakTimes.forEach(entry => {
+        rowsContainer.appendChild(createPeakTimeEntry(entry.start, entry.end, entry.weekdays));
     });
 }
-function createTimesRow(start, end) {
-    const row = document.createElement("div");
-    row.className = "settings-editor-row";
-    row.appendChild(createTimeInput(start, "start"));
-    row.appendChild(createTimeInput(end, "end"));
+function createPeakTimeEntry(start, end, weekdays) {
+    const container = document.createElement("div");
+    container.className = "peak-time-entry";
 
-    return row;
+    const timesRow = document.createElement("div");
+    timesRow.className = "settings-editor-row";
+    timesRow.appendChild(createTimeInput(start, "start"));
+    timesRow.appendChild(createTimeInput(end, "end"));
+
+    const weekdayRow = document.createElement("div");
+    weekdayRow.className = "settings-editor-row weekday-row";
+    weekdayRow.title = "Peak applies only on the selected days (UTC)";
+
+    const weekdayLabel = document.createElement("span");
+    weekdayLabel.className = "weekday-label";
+    weekdayLabel.textContent = "Days";
+    weekdayRow.appendChild(weekdayLabel);
+
+    PEAK_WEEKDAY_KEYS.forEach(day => {
+        weekdayRow.appendChild(createWeekdayButton(day, weekdays[day]));
+    });
+
+    container.appendChild(timesRow);
+    container.appendChild(weekdayRow);
+
+    return container;
+}
+function createWeekdayButton(day, active) {
+    const label = day[0].toUpperCase() + day.slice(1);
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.day = day;
+    button.className = "weekday-btn menu_button" + (active ? " active" : "");
+    button.textContent = label;
+
+    return button;
 }
 function createTimeInput(value, field) {
     const input = document.createElement("input");
@@ -761,9 +829,17 @@ function createTimeInput(value, field) {
 }
 function addTimeRow() {
     const rowsContainer = panelElemId("peakTimeEditorRows");
-    const row = createTimesRow("", "");
-    rowsContainer.appendChild(row);
-    row.querySelector("input").focus();
+    const entry = createPeakTimeEntry("", "", DEFAULT_PEAK_WEEKDAYS);
+    rowsContainer.appendChild(entry);
+    entry.querySelector("input").focus();
+}
+function onPeakTimeEditorClick(event) {
+    const button = event.target.closest('[data-day]');
+    if (button) {
+        button.classList.toggle("active");
+    }
+
+    savePeakTimeEditorDebounced();
 }
 function updatePeakTimeIndicators() {
     const activePeakHours = getActivatedPeakHours();
@@ -786,7 +862,7 @@ function showCurrentUTCTime(activePeakHours) {
 
     if (activePeakHours.length) {
         const firstPeakHours = activePeakHours[0];
-        let timeLeft = timeToInt(firstPeakHours[1]) - timeToInt(formattedTime);
+        let timeLeft = timeToInt(firstPeakHours.end) - timeToInt(formattedTime);
         if (timeLeft < 0) timeLeft += 1440; // 24h * 60m
 
         msg = `[ ${formattedTime} ] On peak hours! ${timeLeft} minute${ timeLeft == 1 ? "" : "s" } left.`;
@@ -815,10 +891,13 @@ function getActivatedPeakHours() {
     const hour = currentTime.getUTCHours();
     const minute = currentTime.getUTCMinutes();
     const currentTimeUTC = timeToInt(`${hour}:${minute}`);
+    const today = PEAK_WEEKDAY_KEYS[currentTime.getUTCDay()];
 
-    return peakTimes.filter(times => {
-        const start = timeToInt(times[0]);
-        const end = timeToInt(times[1]);
+    return peakTimes.filter(entry => {
+        if (!entry.weekdays[today]) return false;
+
+        const start = timeToInt(entry.start);
+        const end = timeToInt(entry.end);
         return isTimeTargetBetween(start, end, currentTimeUTC);
     });
 }
@@ -877,6 +956,7 @@ jQuery(async () => {
 
     populatePeakTimeEditor();
     panelElemId("peakTimeEditorRows").addEventListener("input", savePeakTimeEditorDebounced);
+    panelElemId("peakTimeEditorRows").addEventListener("click", onPeakTimeEditorClick);
     panelElemId("timeInUtcBtn").addEventListener("click", showCurrentUTCTime);
     panelElemId("addPeakTimeBtn").addEventListener("click", addTimeRow);
     updatePeakTimeIndicators();
