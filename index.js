@@ -680,14 +680,14 @@ const savePriceEditorDebounced = debounce(savePriceEditor, 300);
 function savePriceEditor() {
     log("Saving price editor values.");
 
-    const rows = panelElemId("priceEditorRows").querySelectorAll(".settings-editor-row");
+    const entries = panelElemId("priceEditorRows").querySelectorAll(".price-entry");
     const newCosts = {};
 
-    rows.forEach(row => {
-        const modelName = row.querySelector('[data-field="modelName"]').value.trim();
-        const cached = parseFloat(row.querySelector('[data-field="cached"]').value);
-        const inCost = parseFloat(row.querySelector('[data-field="in"]').value);
-        const outCost = parseFloat(row.querySelector('[data-field="out"]').value);
+    entries.forEach(entry => {
+        const modelName = entry.querySelector('[data-field="modelName"]').value.trim();
+        const cached = parseFloat(entry.querySelector('[data-field="cached"]').value);
+        const inCost = parseFloat(entry.querySelector('[data-field="in"]').value);
+        const outCost = parseFloat(entry.querySelector('[data-field="out"]').value);
 
         if (!modelName) return;
         if (isNaN(cached) || isNaN(inCost) || isNaN(outCost)) return;
@@ -715,15 +715,31 @@ function populatePriceEditor() {
     });
 }
 function createPriceRow(modelName, cost) {
-    const row = document.createElement("div");
-    row.className = "settings-editor-row";
+    const container = document.createElement("div");
+    container.className = "price-entry";
 
-    row.appendChild(createPriceInput("text", "modelName", modelName));
-    row.appendChild(createPriceInput("number", "cached", cost.cached));
-    row.appendChild(createPriceInput("number", "in", cost.in));
-    row.appendChild(createPriceInput("number", "out", cost.out));
+    const modelRow = document.createElement("div");
+    modelRow.className = "settings-editor-row";
+    modelRow.appendChild(createPriceInput("text", "modelName", modelName));
 
-    return row;
+    const costRow = document.createElement("div");
+    costRow.className = "settings-editor-row";
+
+    const priceFields = [
+        { field: "cached", value: cost.cached, title: "Cached" },
+        { field: "in", value: cost.in, title: "Input" },
+        { field: "out", value: cost.out, title: "Output" },
+    ];
+    priceFields.forEach(item => {
+        const input = createPriceInput("number", item.field, item.value);
+        input.title = item.title;
+        costRow.appendChild(input);
+    });
+
+    container.appendChild(modelRow);
+    container.appendChild(costRow);
+
+    return container;
 }
 function createPriceInput(type, field, value) {
     const input = document.createElement("input");
@@ -737,10 +753,10 @@ function createPriceInput(type, field, value) {
 }
 function addModelRow() {
     const rowsContainer = panelElemId("priceEditorRows");
-    const row = createPriceRow("", DEFAULT_COST);
+    const entry = createPriceRow("", DEFAULT_COST);
 
-    rowsContainer.appendChild(row);
-    row.querySelector("input").focus();
+    rowsContainer.appendChild(entry);
+    entry.querySelector("input").focus();
 }
 
 const savePeakTimeEditorDebounced = debounce(savePeakTimeEditor, 300);
