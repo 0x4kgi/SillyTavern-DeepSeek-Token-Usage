@@ -1,46 +1,21 @@
-const EXTENSION_NAME = "SillyTavern-DeepSeek-Token-Usage";
-const EXTENSION_FOLDER_PATH = `scripts/extensions/third-party/${EXTENSION_NAME}`;
-const EXT_PREFIX = "ds-token--";
+import {
+    EXTENSION_NAME,
+    EXTENSION_FOLDER_PATH,
+    EXT_PREFIX,
+} from "./src/constants.js";
+import {
+    DEFAULT_COST,
+    DEFAULT_DEEPSEEK_COST,
+    PEAK_WEEKDAY_KEYS,
+    DEFAULT_PEAK_WEEKDAYS,
+    DEFAULT_PEAK_TIMES,
+} from "./src/defaults.js"
+import { log, debounce } from "./src/utils.js";
 
-// Default prices, as fallback
-// Need to update this when DS's price updates
-// https://api-docs.deepseek.com/quick_start/pricing
-const DEFAULT_DEEPSEEK_COST = {
-    "deepseek-v4-flash": {
-        in: 0.22,
-        cached: 0.007,
-        out: 0.66,
-    },
-    "deepseek-v4-pro": {
-        in: 0.66,
-        cached: 0.022,
-        out: 1.98,
-    },
-};
-const DEFAULT_COST = {
-    in: 0.0,
-    cached: 0.0,
-    out: 0.0,
-};
-const PEAK_WEEKDAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-// Fallback weekdays, also used when migrating old saved data.
-const DEFAULT_PEAK_WEEKDAYS = {
-    sun: true,
-    mon: true,
-    tue: true,
-    wed: true,
-    thu: true,
-    fri: true,
-    sat: true,
-};
-const DEFAULT_PEAK_TIMES = [
-    // UTC times. DeepSeek: off-peak rates apply all day on weekends (Sat/Sun).
-    { start: "01:00", end: "04:00", weekdays: { sun: false, mon: true, tue: true, wed: true, thu: true, fri: true, sat: false } },
-    { start: "06:00", end: "10:00", weekdays: { sun: false, mon: true, tue: true, wed: true, thu: true, fri: true, sat: false } },
-];
-
-/** @type {Object<string, DEFAULT_COST>} */
+/** @type {Object.<string, import("./src/defaults.js").ModelCost>} */
 let deepseekCost = {};
+
+/** @type {import("./src/defaults.js").PeakTimes[]} */
 let peakTimes = [];
 
 const Statistic = {
@@ -75,23 +50,6 @@ let sessionUsage;
 
 /** @type {Usage[]} */
 let sessionLog = [];
-
-function log(...args) {
-    console.log(`[${EXTENSION_NAME}]`, ...args);
-}
-["warn", "error"].forEach(item => {
-    log[item] = function (...args) {
-        console[item](`[${EXTENSION_NAME}]`, ...args);
-    }
-});
-
-function debounce(func, timeout = 300){
-    let timer;
-    return (...args) => {
-        clearTimeout(timer);
-        timer = setTimeout(() => { func.apply(this, args); }, timeout);
-    };
-}
 
 function fetchFromLocalStorage(key, defaultValue) {
     const raw = localStorage.getItem(`${EXT_PREFIX}${key}`);
