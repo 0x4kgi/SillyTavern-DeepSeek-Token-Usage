@@ -787,7 +787,7 @@ function onPeakTimeEditorClick(event) {
 }
 function updatePeakTimeIndicators() {
     const activePeakHours = getActivatedPeakHours();
-
+    log("Peak hours list", activePeakHours);
     showPeakTimeInTitleBadge(activePeakHours);
     showCurrentUTCTime(activePeakHours);
 }
@@ -901,7 +901,7 @@ jQuery(async () => {
     populatePeakTimeEditor();
     panelElemId("peakTimeEditorRows").addEventListener("input", savePeakTimeEditorDebounced);
     panelElemId("peakTimeEditorRows").addEventListener("click", onPeakTimeEditorClick);
-    panelElemId("timeInUtcBtn").addEventListener("click", showCurrentUTCTime);
+    panelElemId("timeInUtcBtn").addEventListener("click", updatePeakTimeIndicators);
     panelElemId("addPeakTimeBtn").addEventListener("click", addTimeRow);
     updatePeakTimeIndicators();
     setInterval(updatePeakTimeIndicators, 30000);
