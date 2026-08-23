@@ -18,7 +18,7 @@ import {
     setLifetimeUsage, setSessionLog, setSessionUsage,
 } from "./src/globals.js";
 import {
-    log, debounce, timeToInt
+    log, debounce, timeToInt, numberComma, isTimeTargetBetween, modelNameToHsl
 } from "./src/utils.js";
 import {
     fetchLifetimeUsageFromLocalStorage,
@@ -281,9 +281,6 @@ function getAllModelStats(source) {
     return accumulated;
 }
 
-function numberComma(number) {
-    return number.toLocaleString();
-}
 
 function updateLastGenerationStats() {
     const selectedModel = panelElemId("modelSelector").value;
@@ -439,14 +436,7 @@ function renderUI() {
     updateSessionLogBarChart();
 }
 
-function modelNameToHsl(name, saturation = 70, lightness = 60) {
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-        hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const hue = Math.abs(hash) % 360;
-    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-}
+
 
 function panelElemId(id) {
     return document.getElementById(EXT_PREFIX + id);
@@ -698,13 +688,6 @@ function showCurrentUTCTime(activePeakHours) {
     }
 
     panelElemId("timeInUtcBtn").innerHTML = msg;
-}
-function isTimeTargetBetween(start, end, value) {
-    if (start > end) {
-        return start <= value || end >= value;
-    } else {
-        return start <= value && end >= value;
-    }
 }
 function getActivatedPeakHours() {
     const currentTime = new Date();
