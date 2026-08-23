@@ -505,7 +505,7 @@ function updateSessionLogBarChart() {
 
     const selectedModel = panelElemId("modelSelector").value;
 
-    let logs = sessionLog;
+    let logs = structuredClone(sessionLog);
     if (selectedModel !== "all") {
         logs = logs.filter(log => log.model === selectedModel);
     }
