@@ -16,3 +16,11 @@ export function debounce(func, timeout = 300){
         timer = setTimeout(() => { func.apply(this, args); }, timeout);
     };
 }
+
+export function timeToInt(time) {
+    const splitTime = time.split(":");
+    const hour = parseInt(splitTime[0]);
+    const minute = parseInt(splitTime[1]);
+
+    return (hour * 60) + minute;
+}
