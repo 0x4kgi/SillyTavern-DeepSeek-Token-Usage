@@ -10,46 +10,16 @@ import {
     DEFAULT_PEAK_WEEKDAYS,
     DEFAULT_PEAK_TIMES,
 } from "./src/defaults.js"
-import { log, debounce } from "./src/utils.js";
-
-/** @type {Object.<string, import("./src/defaults.js").ModelCost>} */
-let deepseekCost = {};
-
-/** @type {import("./src/defaults.js").PeakTimes[]} */
-let peakTimes = [];
-
-const Statistic = {
-    prompt: 0,
-    cacheHit: 0,
-    cacheMiss: 0,
-    completion: 0,
-    reasoning: 0,
-    response: 0,
-    total: 0,
-};
-const Usage = {
-    model: '',
-    timestamp: 0,
-    count: 0,
-    tokens: structuredClone(Statistic),
-    extra: structuredClone(Statistic),
-};
-
-let accumulatedUsage = {
-    requestCount: 0,
-
-    /** @type {Object<string, Usage>} */
-    models: {}
-};
-
-/** @type {accumulatedUsage} */
-let lifetimeUsage;
-
-/** @type {accumulatedUsage} */
-let sessionUsage;
-
-/** @type {Usage[]} */
-let sessionLog = [];
+import {
+    Statistic, Usage,
+    deepseekCost, peakTimes,
+    setDeepseekCost, setPeakTimes,
+    accumulatedUsage, lifetimeUsage, sessionUsage, sessionLog,
+    setLifetimeUsage, setSessionLog, setSessionUsage,
+} from "./src/globals.js";
+import {
+    log, debounce
+} from "./src/utils.js";
 
 function fetchFromLocalStorage(key, defaultValue) {
     const raw = localStorage.getItem(`${EXT_PREFIX}${key}`);
@@ -657,7 +627,7 @@ function savePriceEditor() {
         };
     });
 
-    deepseekCost = newCosts;
+    setDeepseekCost(newCosts);
 
     saveDeepSeekCostToLocalStorageDebounced();
     populateModelSelector();
@@ -738,7 +708,7 @@ function savePeakTimeEditor() {
         newTimes.push({ start, end, weekdays });
     });
 
-    peakTimes = newTimes;
+    setPeakTimes(newTimes);
 
     savePeakTimesToLocalStorageDebounced();
     updatePeakTimeIndicators();
@@ -905,15 +875,15 @@ function showLastOnMessage({ modelName, tokens, ratio }) {
 jQuery(async () => {
     overrideFetch();
 
-    deepseekCost = fetchDeepSeekCostFromLocalStorage();
-    peakTimes = fetchPeakTimesFromLocalStorage();
+    setDeepseekCost(fetchDeepSeekCostFromLocalStorage())
+    setPeakTimes(fetchPeakTimesFromLocalStorage());
 
     Object.keys(deepseekCost).forEach(modelName => {
         accumulatedUsage.models[modelName] = structuredClone(Usage);
     });
 
-    lifetimeUsage = fetchLifetimeUsageFromLocalStorage();
-    sessionUsage = structuredClone(accumulatedUsage);
+    setLifetimeUsage(fetchLifetimeUsageFromLocalStorage());
+    setSessionUsage(structuredClone(accumulatedUsage));
 
     let panelHtml = await $.get(`${EXTENSION_FOLDER_PATH}/panel.html`);
     panelHtml = panelHtml.replaceAll('id="', `id="${EXT_PREFIX}`);
