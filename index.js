@@ -16,7 +16,10 @@ import {
     fetchDeepSeekCostFromLocalStorage,
     fetchPeakTimesFromLocalStorage,
 } from "./src/storage.js";
-import { panelElemId, renderUIDebounced, updateNonLastStatsOnPanel, populateModelSelector, modelDropdownChange } from "./src/html.js";
+import {
+    panelElemId, renderUIDebounced, updateNonLastStatsOnPanel,
+    modelSelectorInit
+} from "./src/html.js";
 import { getActivatedPeakHours, peakTimeInit } from "./src/peakTimes.js";
 import { parseUsageObject, saveAggregatedUsage } from "./src/usage.js";
 import { priceEditorInit } from "./src/modelCost.js";
@@ -182,9 +185,7 @@ jQuery(async () => {
     panelHtml = panelHtml.replaceAll('id="', `id="${EXT_PREFIX}`);
     $("#extensions_settings2").append(panelHtml);
 
-    populateModelSelector();
-    panelElemId("modelSelector").addEventListener("change", modelDropdownChange);
-
+    modelSelectorInit();
     priceEditorInit();
     peakTimeInit();
 

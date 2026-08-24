@@ -29,6 +29,11 @@ function renderUI() {
     updateSessionLogBarChart();
 }
 
+export function modelSelectorInit() {
+    populateModelSelector();
+    panelElemId("modelSelector").addEventListener("change", modelDropdownChange);
+}
+
 function updateLastGenerationStats() {
     const selectedModel = panelElemId("modelSelector").value;
 
