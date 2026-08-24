@@ -40,11 +40,12 @@ export function overrideFetch() {
 
         const response = await originalFetch.apply(this, args);
 
-        try {
-            handleResponse(response, requestBody)
-        } catch (error) {
+        // Ditching the try catch pattern for Promise.catch...
+        // to preserve streaming wile having error catching.
+        // An alternative is to await, but it breaks UX for streaming
+        handleResponse(response, requestBody).catch(error => {
             log.error("Error intercepting fetch:", error);
-        }
+        });
 
         return response;
     };
