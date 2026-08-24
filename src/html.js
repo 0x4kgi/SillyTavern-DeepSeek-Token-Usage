@@ -200,3 +200,30 @@ function showLastOnMessage({ modelName, tokens, ratio }) {
 
     statBlock.textContent = `${modelName}: ${inTokens} → ${outTokens} (${ratio.toFixed(1)}%)`;
 }
+
+export function populateModelSelector() {
+    const modelSelector = panelElemId("modelSelector");
+    const currentValue = modelSelector.value;
+
+    modelSelector.innerHTML = "";
+
+    const allOption = document.createElement("option");
+    allOption.value = "all";
+    allOption.innerHTML = "All models";
+    modelSelector.append(allOption);
+
+    Object.keys(deepseekCost).forEach(model => {
+        const select = document.createElement("option");
+
+        select.value = model;
+        select.innerHTML = model;
+
+        modelSelector.append(select);
+    });
+
+    modelSelector.value = deepseekCost[currentValue] ? currentValue : "all";
+}
+
+export function modelDropdownChange() {
+    renderUIDebounced();
+}

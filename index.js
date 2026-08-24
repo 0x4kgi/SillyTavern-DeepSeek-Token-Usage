@@ -28,7 +28,7 @@ import {
     fetchPeakTimesFromLocalStorage,
     savePeakTimesToLocalStorageDebounced,
 } from "./src/storage.js";
-import { panelElemId, panelElemText, renderUIDebounced, updateNonLastStatsOnPanel } from "./src/html.js";
+import { panelElemId, panelElemText, renderUIDebounced, updateNonLastStatsOnPanel, populateModelSelector, modelDropdownChange } from "./src/html.js";
 import {
     savePeakTimeEditorDebounced, populatePeakTimeEditor, addTimeRow,
     onPeakTimeEditorClick, updatePeakTimeIndicators, getActivatedPeakHours
