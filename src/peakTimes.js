@@ -123,7 +123,6 @@ export function onPeakTimeEditorClick(event) {
 
 export function updatePeakTimeIndicators() {
     const activePeakHours = getActivatedPeakHours();
-    log("Peak hours list", activePeakHours);
     showPeakTimeInTitleBadge(activePeakHours);
     showCurrentUTCTime(activePeakHours);
 }
