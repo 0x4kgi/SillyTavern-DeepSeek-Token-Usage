@@ -1,8 +1,10 @@
 import { log, debounce, modelNameToHsl, numberComma } from "./utils.js";
-import { EXT_PREFIX, EXTENSION_FOLDER_PATH } from "./constants.js";
+import { EXT_PREFIX } from "./constants.js";
 import { calculateTokenCost, getAllModelStats } from "./usage.js";
-import { sessionLog, Statistic, sessionUsage, lifetimeUsage, Usage, accumulatedUsage, deepseekCost, setDeepseekCost, setLifetimeUsage, setPeakTimes, setSessionUsage } from "./globals.js";
-import { fetchDeepSeekCostFromLocalStorage, fetchPeakTimesFromLocalStorage, fetchLifetimeUsageFromLocalStorage } from "./storage.js";
+import {
+    sessionLog, Statistic, sessionUsage, lifetimeUsage,
+    Usage, accumulatedUsage, deepseekCost
+} from "./globals.js";
 
 export function panelElemId(id) {
     return document.getElementById(EXT_PREFIX + id);
