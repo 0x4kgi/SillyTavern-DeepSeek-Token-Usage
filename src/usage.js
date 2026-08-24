@@ -79,3 +79,27 @@ export function getAllModelStats(source) {
 
     return accumulated;
 }
+
+/**
+ * @param {accumulatedUsage} usageLog
+ * @param {Statistic} tokens
+ * @param {string} model
+ * @param {array} activePeakHours
+ */
+export function saveAggregatedUsage(usageLog, tokens, model, activePeakHours) {
+    let modelObject = usageLog.models[model] || structuredClone(Usage);
+
+    modelObject.model = model;
+    modelObject.timestamp = Date.now();
+    modelObject.count += 1;
+
+    Object.keys(tokens).forEach(parameter => {
+        modelObject.tokens[parameter] += tokens[parameter];
+        if (activePeakHours.length) {
+            modelObject.extra[parameter] += tokens[parameter];
+        }
+    });
+
+    usageLog.requestCount += 1;
+    usageLog.models[model] = modelObject;
+}

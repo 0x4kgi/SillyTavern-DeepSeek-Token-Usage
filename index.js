@@ -33,7 +33,7 @@ import {
     savePeakTimeEditorDebounced, populatePeakTimeEditor, addTimeRow,
     onPeakTimeEditorClick, updatePeakTimeIndicators, getActivatedPeakHours
 } from "./src/peakTimes.js";
-import { parseUsageObject, calculateTokenCost } from "./src/usage.js";
+import { parseUsageObject, calculateTokenCost, saveAggregatedUsage } from "./src/usage.js";
 
 export function overrideFetch() {
     log("Patching window.fetch");
@@ -154,31 +154,6 @@ async function handleNonStream(data) {
     }
 }
 
-/**
- *
- * @param {accumulatedUsage} usageLog
- * @param {Statistic} tokens
- * @param {string} model
- * @param {array} activePeakHours
- */
-function saveAggregatedUsage(usageLog, tokens, model, activePeakHours) {
-    let modelObject = usageLog.models[model] || structuredClone(Usage);
-
-    modelObject.model = model;
-    modelObject.timestamp = Date.now();
-    modelObject.count += 1;
-
-    Object.keys(tokens).forEach(parameter => {
-        modelObject.tokens[parameter] += tokens[parameter];
-        if (activePeakHours.length) {
-            modelObject.extra[parameter] += tokens[parameter];
-        }
-    });
-
-    usageLog.requestCount += 1;
-    usageLog.models[model] = modelObject;
-}
-
 function processUsageData(usage, model) {
     if (!usage) return;
     log("Processing Usage data for display.");
@@ -201,32 +176,6 @@ function processUsageData(usage, model) {
 
     saveLifetimeUsageToLocalStorage();
 
-    renderUIDebounced();
-}
-
-function populateModelSelector() {
-    const modelSelector = panelElemId("modelSelector");
-    const currentValue = modelSelector.value;
-
-    modelSelector.innerHTML = "";
-
-    const allOption = document.createElement("option");
-    allOption.value = "all";
-    allOption.innerHTML = "All models";
-    modelSelector.append(allOption);
-
-    Object.keys(deepseekCost).forEach(model => {
-        const select = document.createElement("option");
-
-        select.value = model;
-        select.innerHTML = model;
-
-        modelSelector.append(select);
-    });
-
-    modelSelector.value = deepseekCost[currentValue] ? currentValue : "all";
-}
-function modelDropdownChange() {
     renderUIDebounced();
 }
 
