@@ -4,6 +4,18 @@ import { log, debounce, timeToInt, isTimeTargetBetween } from "./utils.js";
 import { PEAK_WEEKDAY_KEYS, DEFAULT_PEAK_WEEKDAYS } from "./defaults.js";
 import { savePeakTimesToLocalStorageDebounced } from "./storage.js";
 
+export function peakTimeInitialization() {
+    populatePeakTimeEditor();
+
+    panelElemId("peakTimeEditorRows").addEventListener("input", savePeakTimeEditorDebounced);
+    panelElemId("peakTimeEditorRows").addEventListener("click", onPeakTimeEditorClick);
+    panelElemId("timeInUtcBtn").addEventListener("click", updatePeakTimeIndicators);
+    panelElemId("addPeakTimeBtn").addEventListener("click", addTimeRow);
+
+    updatePeakTimeIndicators();
+    setInterval(updatePeakTimeIndicators, 30000);
+}
+
 export const savePeakTimeEditorDebounced = debounce(savePeakTimeEditor, 300);
 function savePeakTimeEditor() {
     log("Saving peak time editor values.");

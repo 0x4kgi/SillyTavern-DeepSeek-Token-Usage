@@ -29,10 +29,7 @@ import {
     savePeakTimesToLocalStorageDebounced,
 } from "./src/storage.js";
 import { panelElemId, panelElemText, renderUIDebounced, updateNonLastStatsOnPanel, populateModelSelector, modelDropdownChange } from "./src/html.js";
-import {
-    savePeakTimeEditorDebounced, populatePeakTimeEditor, addTimeRow,
-    onPeakTimeEditorClick, updatePeakTimeIndicators, getActivatedPeakHours
-} from "./src/peakTimes.js";
+import { getActivatedPeakHours, peakTimeInitialization } from "./src/peakTimes.js";
 import { parseUsageObject, calculateTokenCost, saveAggregatedUsage } from "./src/usage.js";
 import { savePriceEditorDebounced, populatePriceEditor, addModelRow } from "./src/modelCost.js";
 
@@ -206,13 +203,7 @@ jQuery(async () => {
     panelElemId("priceEditorRows").addEventListener("input", savePriceEditorDebounced);
     panelElemId("addModelBtn").addEventListener("click", addModelRow);
 
-    populatePeakTimeEditor();
-    panelElemId("peakTimeEditorRows").addEventListener("input", savePeakTimeEditorDebounced);
-    panelElemId("peakTimeEditorRows").addEventListener("click", onPeakTimeEditorClick);
-    panelElemId("timeInUtcBtn").addEventListener("click", updatePeakTimeIndicators);
-    panelElemId("addPeakTimeBtn").addEventListener("click", addTimeRow);
-    updatePeakTimeIndicators();
-    setInterval(updatePeakTimeIndicators, 30000);
+    peakTimeInitialization();
 
     log("Extension loaded!");
 });
