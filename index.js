@@ -31,7 +31,7 @@ import {
 import { panelElemId, panelElemText, renderUIDebounced, updateNonLastStatsOnPanel, populateModelSelector, modelDropdownChange } from "./src/html.js";
 import { getActivatedPeakHours, peakTimeInitialization } from "./src/peakTimes.js";
 import { parseUsageObject, calculateTokenCost, saveAggregatedUsage } from "./src/usage.js";
-import { savePriceEditorDebounced, populatePriceEditor, addModelRow } from "./src/modelCost.js";
+import { priceEditorInitializaion } from "./src/modelCost.js";
 
 export function overrideFetch() {
     log("Patching window.fetch");
@@ -199,9 +199,7 @@ jQuery(async () => {
     populateModelSelector();
     panelElemId("modelSelector").addEventListener("change", modelDropdownChange);
 
-    populatePriceEditor();
-    panelElemId("priceEditorRows").addEventListener("input", savePriceEditorDebounced);
-    panelElemId("addModelBtn").addEventListener("click", addModelRow);
+    priceEditorInitializaion();
 
     peakTimeInitialization();
 

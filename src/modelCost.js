@@ -4,6 +4,13 @@ import { panelElemId, populateModelSelector, renderUIDebounced } from "./html.js
 import { saveDeepSeekCostToLocalStorageDebounced } from "./storage.js";
 import { debounce, log } from "./utils.js";
 
+export function priceEditorInitializaion() {
+    populatePriceEditor();
+
+    panelElemId("priceEditorRows").addEventListener("input", savePriceEditorDebounced);
+    panelElemId("addModelBtn").addEventListener("click", addModelRow);
+}
+
 export const savePriceEditorDebounced = debounce(savePriceEditor, 300);
 function savePriceEditor() {
     log("Saving price editor values.");
