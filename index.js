@@ -182,14 +182,13 @@ jQuery(async () => {
     panelHtml = panelHtml.replaceAll('id="', `id="${EXT_PREFIX}`);
     $("#extensions_settings2").append(panelHtml);
 
-    updateNonLastStatsOnPanel("lifetime");
-
     populateModelSelector();
     panelElemId("modelSelector").addEventListener("change", modelDropdownChange);
 
     priceEditorInitializaion();
-
     peakTimeInitialization();
+
+    updateNonLastStatsOnPanel("lifetime");
 
     log("Extension loaded!");
 });
