@@ -1,36 +1,24 @@
 import {
-    EXTENSION_NAME,
     EXTENSION_FOLDER_PATH,
     EXT_PREFIX,
 } from "./src/constants.js";
 import {
-    DEFAULT_COST,
-    DEFAULT_DEEPSEEK_COST,
-    PEAK_WEEKDAY_KEYS,
-    DEFAULT_PEAK_WEEKDAYS,
-    DEFAULT_PEAK_TIMES,
-} from "./src/defaults.js"
-import {
     Statistic, Usage,
-    deepseekCost, peakTimes,
+    deepseekCost,
     setDeepseekCost, setPeakTimes,
     accumulatedUsage, lifetimeUsage, sessionUsage, sessionLog,
-    setLifetimeUsage, setSessionLog, setSessionUsage,
+    setLifetimeUsage, setSessionUsage,
 } from "./src/globals.js";
-import {
-    log, debounce, timeToInt, numberComma, isTimeTargetBetween, modelNameToHsl
-} from "./src/utils.js";
+import { log } from "./src/utils.js";
 import {
     fetchLifetimeUsageFromLocalStorage,
     saveLifetimeUsageToLocalStorage,
     fetchDeepSeekCostFromLocalStorage,
-    saveDeepSeekCostToLocalStorageDebounced,
     fetchPeakTimesFromLocalStorage,
-    savePeakTimesToLocalStorageDebounced,
 } from "./src/storage.js";
-import { panelElemId, panelElemText, renderUIDebounced, updateNonLastStatsOnPanel, populateModelSelector, modelDropdownChange } from "./src/html.js";
+import { panelElemId, renderUIDebounced, updateNonLastStatsOnPanel, populateModelSelector, modelDropdownChange } from "./src/html.js";
 import { getActivatedPeakHours, peakTimeInitialization } from "./src/peakTimes.js";
-import { parseUsageObject, calculateTokenCost, saveAggregatedUsage } from "./src/usage.js";
+import { parseUsageObject, saveAggregatedUsage } from "./src/usage.js";
 import { priceEditorInitializaion } from "./src/modelCost.js";
 
 export function overrideFetch() {
