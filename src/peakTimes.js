@@ -4,7 +4,7 @@ import { log, debounce, timeToInt, isTimeTargetBetween } from "./utils.js";
 import { PEAK_WEEKDAY_KEYS, DEFAULT_PEAK_WEEKDAYS } from "./defaults.js";
 import { savePeakTimesToLocalStorageDebounced } from "./storage.js";
 
-export function peakTimeInitialization() {
+export function peakTimeInit() {
     populatePeakTimeEditor();
 
     panelElemId("peakTimeEditorRows").addEventListener("input", savePeakTimeEditorDebounced);

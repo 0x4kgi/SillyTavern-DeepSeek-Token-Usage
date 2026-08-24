@@ -4,7 +4,7 @@ import { panelElemId, populateModelSelector, renderUIDebounced } from "./html.js
 import { saveDeepSeekCostToLocalStorageDebounced } from "./storage.js";
 import { debounce, log } from "./utils.js";
 
-export function priceEditorInitializaion() {
+export function priceEditorInit() {
     populatePriceEditor();
 
     panelElemId("priceEditorRows").addEventListener("input", savePriceEditorDebounced);
