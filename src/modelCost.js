@@ -8,6 +8,7 @@ export function priceEditorInit() {
     populatePriceEditor();
 
     panelElemId("priceEditorRows").addEventListener("input", savePriceEditorDebounced);
+    panelElemId("priceEditorRows").addEventListener("click", deleteModelRow);
     panelElemId("addModelBtn").addEventListener("click", addModelRow);
 }
 
@@ -54,10 +55,17 @@ export function populatePriceEditor() {
 function createPriceRow(modelName, cost) {
     const container = document.createElement("div");
     container.className = "price-entry";
+    container.dataset.model = modelName || "new-model-" + Math.random();
 
     const modelRow = document.createElement("div");
     modelRow.className = "settings-editor-row";
     modelRow.appendChild(createPriceInput("text", "modelName", modelName));
+
+    const deleteButton = document.createElement("button");
+    deleteButton.innerHTML = `<span id="header-badge" class="fa-solid fa-trash"></span>`;
+    deleteButton.className = "model-delete menu_button interactable";
+    deleteButton.style.color = "red";
+    modelRow.appendChild(deleteButton);
 
     const costRow = document.createElement("div");
     costRow.className = "settings-editor-row";
@@ -96,4 +104,15 @@ export function addModelRow() {
 
     rowsContainer.appendChild(entry);
     entry.querySelector("input").focus();
+}
+
+function deleteModelRow(event) {
+    const button = event.target.closest(".model-delete");
+    if (!button) return;
+
+    const modelRow = button.closest("[data-model]");
+    modelRow.parentElement.removeChild(modelRow);
+
+    savePriceEditor();
+    populatePriceEditor();
 }
