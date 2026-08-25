@@ -9,6 +9,7 @@ export function peakTimeInit() {
 
     panelElemId("peakTimeEditorRows").addEventListener("input", savePeakTimeEditorDebounced);
     panelElemId("peakTimeEditorRows").addEventListener("click", onPeakTimeEditorClick);
+    panelElemId("peakTimeEditorRows").addEventListener("click", deleteTimeRow);
     panelElemId("timeInUtcBtn").addEventListener("click", updatePeakTimeIndicators);
     panelElemId("addPeakTimeBtn").addEventListener("click", addTimeRow);
 
@@ -56,11 +57,18 @@ export function populatePeakTimeEditor() {
 function createPeakTimeEntry(start, end, weekdays) {
     const container = document.createElement("div");
     container.className = "peak-time-entry";
+    container.dataset.timeId = `s${start}-e${end}-${Math.random()}`;
 
     const timesRow = document.createElement("div");
     timesRow.className = "settings-editor-row";
     timesRow.appendChild(createTimeInput(start, "start"));
     timesRow.appendChild(createTimeInput(end, "end"));
+
+    const deleteButton = document.createElement("button");
+    deleteButton.innerHTML = `<span id="header-badge" class="fa-solid fa-trash"></span>`;
+    deleteButton.className = "time-delete menu_button interactable";
+    deleteButton.style.color = "red";
+    timesRow.appendChild(deleteButton);
 
     const weekdayRow = document.createElement("div");
     weekdayRow.className = "settings-editor-row weekday-row";
@@ -110,6 +118,17 @@ export function addTimeRow() {
     const entry = createPeakTimeEntry("", "", DEFAULT_PEAK_WEEKDAYS);
     rowsContainer.appendChild(entry);
     entry.querySelector("input").focus();
+}
+
+function deleteTimeRow(event) {
+    const button = event.target.closest(".time-delete");
+    if (!button) return;
+
+    const timeRow = button.closest("[data-time-id]");
+    timeRow.parentElement.removeChild(timeRow);
+
+    savePeakTimeEditor();
+    populatePeakTimeEditor();
 }
 
 export function onPeakTimeEditorClick(event) {
