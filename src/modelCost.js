@@ -63,7 +63,7 @@ function createPriceRow(modelName, cost) {
 
     const deleteButton = document.createElement("button");
     deleteButton.innerHTML = buttons.delete.innerHTML;
-    deleteButton.className = buttons.delete.className;
+    deleteButton.className = "model" + buttons.delete.className;
     deleteButton.style.color = buttons.delete.color;
     modelRow.appendChild(deleteButton);
 
@@ -133,7 +133,7 @@ function deleteModelRow(event) {
 
     const confirmButton = document.createElement("button");
     confirmButton.innerHTML = buttons.finalDelete.innerHTML;
-    confirmButton.className = buttons.finalDelete.className;
+    confirmButton.className = "model" + buttons.finalDelete.className;
     confirmButton.style.color = buttons.finalDelete.color;
 
     confirmButton.onclick = () => {

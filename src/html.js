@@ -9,17 +9,17 @@ import {
 export const buttons = {
     delete: {
         innerHTML: `<span class="fa-solid fa-trash"></span>`,
-        className: "model-delete menu_button interactable",
+        className: "-delete menu_button interactable",
         color: "red",
     },
     finalDelete: {
         innerHTML: `<span class="fa-solid fa-trash"></span>`,
-        className: "model-delete-confirm menu_button interactable",
+        className: "-delete-confirm menu_button interactable",
         color: "red",
     },
     recycle: {
         innerHTML: `<span class="fa-solid fa-recycle"></span>`,
-        className: "model-delete menu_button interactable",
+        className: "-delete menu_button interactable",
         color: "white",
     },
 };

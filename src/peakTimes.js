@@ -65,9 +65,9 @@ function createPeakTimeEntry(start, end, weekdays) {
     timesRow.appendChild(createTimeInput(end, "end"));
 
     const deleteButton = document.createElement("button");
-    deleteButton.innerHTML = `<span id="header-badge" class="fa-solid fa-trash"></span>`;
-    deleteButton.className = "time-delete menu_button interactable";
-    deleteButton.style.color = "red";
+    deleteButton.innerHTML = buttons.delete.innerHTML;
+    deleteButton.className = "time" + buttons.delete.className;
+    deleteButton.style.color = buttons.delete.color;
     timesRow.appendChild(deleteButton);
 
     const weekdayRow = document.createElement("div");
@@ -145,7 +145,7 @@ function deleteTimeRow(event) {
 
     const confirmButton = document.createElement("button");
     confirmButton.innerHTML = buttons.finalDelete.innerHTML;
-    confirmButton.className = buttons.finalDelete.className;
+    confirmButton.className = "time" + buttons.finalDelete.className;
     confirmButton.style.color = buttons.finalDelete.color;
 
     confirmButton.onclick = () => {
@@ -154,7 +154,7 @@ function deleteTimeRow(event) {
         populatePeakTimeEditor();
     };
 
-    button.innerHTML = buttons.recycle.innerHTML;
+    button.innerHTML = "time" + buttons.recycle.innerHTML;
     button.style.color = buttons.recycle.color;
     button.parentElement.insertBefore(confirmButton, button);
 }
