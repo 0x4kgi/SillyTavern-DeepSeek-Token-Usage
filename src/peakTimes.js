@@ -132,7 +132,7 @@ function deleteTimeRow(event) {
     // Code block similar to modelCost.js::deleteModelRow()
     if (timeRow.classList.contains("delete-candidate")) {
         timeRow.classList.remove("delete-candidate");
-        const cb = timeRow.querySelector(".model-delete-confirm");
+        const cb = timeRow.querySelector(".time-delete-confirm");
         if (cb) cb.parentElement.removeChild(cb);
 
         button.innerHTML = buttons.delete.innerHTML;
@@ -154,7 +154,7 @@ function deleteTimeRow(event) {
         populatePeakTimeEditor();
     };
 
-    button.innerHTML = "time" + buttons.recycle.innerHTML;
+    button.innerHTML = buttons.recycle.innerHTML;
     button.style.color = buttons.recycle.color;
     button.parentElement.insertBefore(confirmButton, button);
 }
