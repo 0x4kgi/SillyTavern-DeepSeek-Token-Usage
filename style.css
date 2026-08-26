@@ -108,6 +108,11 @@
         padding: 2px 0;
     }
 
+    .weekday-btn.active {
+        font-weight: bolder;
+        font-style: italic;
+    }
+
     .peak-time-entry:not(:first-child),
     .price-entry:not(:first-child) {
         border-top: 1px solid rgba(255,255,255,0.05);
