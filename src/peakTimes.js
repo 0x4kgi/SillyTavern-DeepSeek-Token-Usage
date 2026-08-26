@@ -1,4 +1,4 @@
-import { panelElemId, renderUIDebounced } from "./html.js";
+import { panelElemId, buttons, renderUIDebounced } from "./html.js";
 import { peakTimes, setPeakTimes } from "./globals.js";
 import { log, debounce, timeToInt, isTimeTargetBetween } from "./utils.js";
 import { PEAK_WEEKDAY_KEYS, DEFAULT_PEAK_WEEKDAYS } from "./defaults.js";
@@ -120,15 +120,43 @@ export function addTimeRow() {
     entry.querySelector("input").focus();
 }
 
+/** @param {Event} event */
 function deleteTimeRow(event) {
+    /** @type {HTMLButtonElement} */
     const button = event.target.closest(".time-delete");
     if (!button) return;
 
+    /** @type {HTMLElement} */
     const timeRow = button.closest("[data-time-id]");
-    timeRow.parentElement.removeChild(timeRow);
 
-    savePeakTimeEditor();
-    populatePeakTimeEditor();
+    // Code block similar to modelCost.js::deleteModelRow()
+    if (timeRow.classList.contains("delete-candidate")) {
+        timeRow.classList.remove("delete-candidate");
+        const cb = timeRow.querySelector(".model-delete-confirm");
+        cb.parentElement.removeChild(cb);
+
+        button.innerHTML = buttons.delete.innerHTML;
+        button.style.color = buttons.delete.color;
+
+        return;
+    }
+
+    timeRow.classList.add("delete-candidate");
+
+    const confirmButton = document.createElement("button");
+    confirmButton.innerHTML = buttons.finalDelete.innerHTML;
+    confirmButton.className = buttons.finalDelete.className;
+    confirmButton.style.color = buttons.finalDelete.color;
+
+    confirmButton.onclick = () => {
+        timeRow.parentElement.removeChild(timeRow);
+        savePeakTimeEditor();
+        populatePeakTimeEditor();
+    };
+
+    button.innerHTML = buttons.recycle.innerHTML;
+    button.style.color = buttons.recycle.color;
+    button.parentElement.insertBefore(confirmButton, button);
 }
 
 export function onPeakTimeEditorClick(event) {
