@@ -113,8 +113,13 @@
         border-top: 1px solid rgba(255,255,255,0.05);
     }
 
-    .delete-candidate input {
+    .delete-candidate input,
+    .delete-candidate [data-day] {
         background-color: rgba(255, 0, 0, 0.30);
+    }
+
+    .delete-candidate .weekday-btn.active {
+        background-color: rgba(255, 0, 0, 0.50);
     }
 }
 
