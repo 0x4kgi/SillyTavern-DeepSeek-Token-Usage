@@ -133,7 +133,7 @@ function deleteTimeRow(event) {
     if (timeRow.classList.contains("delete-candidate")) {
         timeRow.classList.remove("delete-candidate");
         const cb = timeRow.querySelector(".model-delete-confirm");
-        cb.parentElement.removeChild(cb);
+        if (cb) cb.parentElement.removeChild(cb);
 
         button.innerHTML = buttons.delete.innerHTML;
         button.style.color = buttons.delete.color;

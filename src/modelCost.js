@@ -120,7 +120,7 @@ function deleteModelRow(event) {
     if (modelRow.classList.contains("delete-candidate")) {
         modelRow.classList.remove("delete-candidate");
         const cb = modelRow.querySelector(".model-delete-confirm");
-        cb.parentElement.removeChild(cb);
+        if (cb) cb.parentElement.removeChild(cb);
 
         button.innerHTML = buttons.delete.innerHTML;
         button.style.color = buttons.delete.color;
