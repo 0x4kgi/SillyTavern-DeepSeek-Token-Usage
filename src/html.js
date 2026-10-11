@@ -39,6 +39,10 @@ export function panelElemText(id, content) {
     elem.textContent = content;
 }
 
+export function panelHtmlString(htmlString) {
+    return htmlString.replaceAll('id="', `id="${EXT_PREFIX}`);
+}
+
 export const renderUIDebounced = debounce(renderUI, 150);
 function renderUI() {
     updateLastGenerationStats();

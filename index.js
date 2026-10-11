@@ -18,7 +18,8 @@ import {
 } from "./src/storage.js";
 import {
     panelElemId, renderUIDebounced, updateNonLastStatsOnPanel,
-    modelSelectorInit
+    modelSelectorInit,
+    panelHtmlString
 } from "./src/html.js";
 import { getActivatedPeakHours, peakTimeInit } from "./src/peakTimes.js";
 import { parseUsageObject, saveAggregatedUsage } from "./src/usage.js";
@@ -183,7 +184,7 @@ jQuery(async () => {
     setSessionUsage(structuredClone(accumulatedUsage));
 
     let panelHtml = await $.get(`${EXTENSION_FOLDER_PATH}/panel.html`);
-    panelHtml = panelHtml.replaceAll('id="', `id="${EXT_PREFIX}`);
+    panelHtml = panelHtmlString(panelHtml);
     $("#extensions_settings2").append(panelHtml);
 
     modelSelectorInit();
