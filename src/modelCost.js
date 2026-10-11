@@ -40,11 +40,8 @@ async function openModelPricePopup() {
         rowsContainer.appendChild(createPriceRow(modelName, modelCost));
     });
 
-    modelCostHtml.addEventListener("input", savePriceEditorDebounced);
-    modelCostHtml.addEventListener("click", deleteModelRow);
-
-    const pp = new Popup(modelCostHtml, POPUP_TYPE.TEXT);
-    const yeah = await pp.show();
+    const popup = new Popup(modelCostHtml, POPUP_TYPE.TEXT);
+    await popup.show();
 }
 
 export const savePriceEditorDebounced = debounce(savePriceEditor, 300);
