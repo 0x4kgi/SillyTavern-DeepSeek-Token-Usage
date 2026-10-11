@@ -15,14 +15,12 @@ const modelCostHtml = htmlStringToElement(/*html*/ `
     <div id="priceEditorRows"></div>
     <button id="addModelBtn" type="button" class="menu_button menu_button_icon interactable">+ Add Model</button>
     <hr>
-    <small>Every change is saved automatically.</small>
 </div>
 `);
 const priceEditorRows = modelCostHtml.querySelector(`#${EXT_PREFIX}priceEditorRows`);
 const addModelBtn = modelCostHtml.querySelector(`#${EXT_PREFIX}addModelBtn`);
 
 export function priceEditorInit() {
-    priceEditorRows.addEventListener("input", savePriceEditorDebounced);
     priceEditorRows.addEventListener("click", deleteModelRow);
     addModelBtn.addEventListener("click", addModelRow);
 
@@ -31,15 +29,22 @@ export function priceEditorInit() {
 
 async function openModelPricePopup() {
     const context = SillyTavern.getContext();
-    const { Popup, POPUP_TYPE } = context;
+    const { Popup, POPUP_TYPE, POPUP_RESULT } = context;
 
     populatePriceEditor();
 
-    const popup = new Popup(modelCostHtml, POPUP_TYPE.TEXT);
-    await popup.show();
+    const popup = new Popup(modelCostHtml, POPUP_TYPE.TEXT, '', {
+        okButton: "Save",
+        cancelButton: "Cancel",
+        allowVerticalScrolling: true,
+    });
+    const result = await popup.show();
+
+    if (result === POPUP_RESULT.AFFIRMATIVE) {
+        savePriceEditor();
+    }
 }
 
-export const savePriceEditorDebounced = debounce(savePriceEditor, 300);
 function savePriceEditor() {
     log("Saving price editor values.");
 
@@ -165,8 +170,6 @@ function deleteModelRow(event) {
 
     confirmButton.onclick = () => {
         modelRow.parentElement.removeChild(modelRow);
-        savePriceEditor();
-        populatePriceEditor();
     };
 
     button.innerHTML = buttons.recycle.innerHTML;
