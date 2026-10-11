@@ -1,15 +1,50 @@
+import { EXT_PREFIX } from "./constants.js";
 import { DEFAULT_COST } from "./defaults.js";
 import { setDeepseekCost, deepseekCost } from "./globals.js";
-import { panelElemId, buttons, populateModelSelector, renderUIDebounced } from "./html.js";
+import { panelElemId, buttons, populateModelSelector, renderUIDebounced, htmlStringToElement } from "./html.js";
 import { saveDeepSeekCostToLocalStorageDebounced } from "./storage.js";
 import { debounce, log } from "./utils.js";
 
-export function priceEditorInit() {
-    populatePriceEditor();
+const modelCostHtml = htmlStringToElement(/*html*/ `
+<div class="settings-editor">
+    <span>Model Prices</span>
+    <hr>
+    <div class="settings-editor-row settings-editor-header">
+        <span>Model | Cached, Input, Output</span>
+    </div>
+    <div id="priceEditorRows"></div>
+    <button id="addModelBtn" type="button" class="menu_button menu_button_icon interactable">+ Add Model</button>
+    <hr>
+    <small>Every change is saved automatically.</small>
+</div>
+`);
 
-    panelElemId("priceEditorRows").addEventListener("input", savePriceEditorDebounced);
-    panelElemId("priceEditorRows").addEventListener("click", deleteModelRow);
-    panelElemId("addModelBtn").addEventListener("click", addModelRow);
+export function priceEditorInit() {
+
+    // lmao, what the fuck
+    modelCostHtml.querySelector(`#${EXT_PREFIX}priceEditorRows`).addEventListener("input", savePriceEditorDebounced);
+    modelCostHtml.querySelector(`#${EXT_PREFIX}priceEditorRows`).addEventListener("click", deleteModelRow);
+    modelCostHtml.querySelector(`#${EXT_PREFIX}addModelBtn`).addEventListener("click", addModelRow);
+
+    panelElemId("open-model-price-popup").addEventListener("click", openModelPricePopup);
+}
+
+async function openModelPricePopup() {
+    const context = SillyTavern.getContext();
+    const { Popup, POPUP_TYPE, POPUP_RESULT } = context;
+
+    const rowsContainer = modelCostHtml.querySelector(`#${EXT_PREFIX}priceEditorRows`);
+    rowsContainer.innerHTML = "";
+    Object.keys(deepseekCost).forEach(modelName => {
+        const modelCost = deepseekCost[modelName];
+        rowsContainer.appendChild(createPriceRow(modelName, modelCost));
+    });
+
+    modelCostHtml.addEventListener("input", savePriceEditorDebounced);
+    modelCostHtml.addEventListener("click", deleteModelRow);
+
+    const pp = new Popup(modelCostHtml, POPUP_TYPE.TEXT);
+    const yeah = await pp.show();
 }
 
 export const savePriceEditorDebounced = debounce(savePriceEditor, 300);
