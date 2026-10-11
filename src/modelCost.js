@@ -18,27 +18,22 @@ const modelCostHtml = htmlStringToElement(/*html*/ `
     <small>Every change is saved automatically.</small>
 </div>
 `);
+const priceEditorRows = modelCostHtml.querySelector(`#${EXT_PREFIX}priceEditorRows`);
+const addModelBtn = modelCostHtml.querySelector(`#${EXT_PREFIX}addModelBtn`);
 
 export function priceEditorInit() {
-
-    // lmao, what the fuck
-    modelCostHtml.querySelector(`#${EXT_PREFIX}priceEditorRows`).addEventListener("input", savePriceEditorDebounced);
-    modelCostHtml.querySelector(`#${EXT_PREFIX}priceEditorRows`).addEventListener("click", deleteModelRow);
-    modelCostHtml.querySelector(`#${EXT_PREFIX}addModelBtn`).addEventListener("click", addModelRow);
+    priceEditorRows.addEventListener("input", savePriceEditorDebounced);
+    priceEditorRows.addEventListener("click", deleteModelRow);
+    addModelBtn.addEventListener("click", addModelRow);
 
     panelElemId("open-model-price-popup").addEventListener("click", openModelPricePopup);
 }
 
 async function openModelPricePopup() {
     const context = SillyTavern.getContext();
-    const { Popup, POPUP_TYPE, POPUP_RESULT } = context;
+    const { Popup, POPUP_TYPE } = context;
 
-    const rowsContainer = modelCostHtml.querySelector(`#${EXT_PREFIX}priceEditorRows`);
-    rowsContainer.innerHTML = "";
-    Object.keys(deepseekCost).forEach(modelName => {
-        const modelCost = deepseekCost[modelName];
-        rowsContainer.appendChild(createPriceRow(modelName, modelCost));
-    });
+    populatePriceEditor();
 
     const popup = new Popup(modelCostHtml, POPUP_TYPE.TEXT);
     await popup.show();
@@ -48,7 +43,7 @@ export const savePriceEditorDebounced = debounce(savePriceEditor, 300);
 function savePriceEditor() {
     log("Saving price editor values.");
 
-    const entries = panelElemId("priceEditorRows").querySelectorAll(".price-entry");
+    const entries = priceEditorRows.querySelectorAll(".price-entry");
     const newCosts = {};
 
     entries.forEach(entry => {
@@ -75,7 +70,7 @@ function savePriceEditor() {
 }
 
 export function populatePriceEditor() {
-    const rowsContainer = panelElemId("priceEditorRows");
+    const rowsContainer = priceEditorRows;
     rowsContainer.innerHTML = "";
 
     Object.keys(deepseekCost).forEach(modelName => {
@@ -131,7 +126,7 @@ function createPriceInput(type, field, value) {
 }
 
 export function addModelRow() {
-    const rowsContainer = panelElemId("priceEditorRows");
+    const rowsContainer = priceEditorRows;
     const entry = createPriceRow("", DEFAULT_COST);
 
     rowsContainer.appendChild(entry);
