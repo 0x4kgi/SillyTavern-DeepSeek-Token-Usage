@@ -110,7 +110,7 @@ function updateLastGenerationStats() {
     panelElemId('ratio').value = ratio;
     panelElemText('model', modelName);
 
-    showLastOnMessage({modelName, tokens, ratio});
+    showLastOnMessage({ modelName, tokens, ratio });
 }
 
 export function updateNonLastStatsOnPanel(statType = "session") {
@@ -196,7 +196,7 @@ function updateSessionLogBarChart() {
 
         const segments = [
             { cls: "bar-seg-cacheMiss", val: log.tokens.cacheMiss, color: modelNameToHsl(log.model, 70, 95) },
-            { cls: "bar-seg-cacheHit",  val: log.tokens.cacheHit,  color: modelNameToHsl(log.model, 70, 60) },
+            { cls: "bar-seg-cacheHit", val: log.tokens.cacheHit, color: modelNameToHsl(log.model, 70, 60) },
             { cls: "bar-seg-completion", val: log.tokens.completion, color: modelNameToHsl(log.model, 55, 45) },
         ];
 
