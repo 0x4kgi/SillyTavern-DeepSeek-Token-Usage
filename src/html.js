@@ -43,6 +43,17 @@ export function panelHtmlString(htmlString) {
     return htmlString.replaceAll('id="', `id="${EXT_PREFIX}`);
 }
 
+export function htmlStringToElement(htmlString, addPrefix = true) {
+    if (addPrefix) {
+        htmlString = panelHtmlString(htmlString);
+    }
+
+    const template = document.createElement("template");
+    template.innerHTML = `<div>${htmlString}</div>`;
+
+    return template.content.firstElementChild;
+}
+
 export const renderUIDebounced = debounce(renderUI, 150);
 function renderUI() {
     updateLastGenerationStats();
