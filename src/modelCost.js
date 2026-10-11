@@ -6,7 +6,7 @@ import { saveDeepSeekCostToLocalStorageDebounced } from "./storage.js";
 import { debounce, log } from "./utils.js";
 
 const modelCostHtml = htmlStringToElement(/*html*/ `
-<div class="settings-editor">
+<div class="ds-token-usage-popup settings-editor">
     <span>Model Prices</span>
     <hr>
     <div class="settings-editor-row settings-editor-header">

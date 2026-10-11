@@ -70,28 +70,6 @@
         width: 100%;
     }
 
-    .settings-editor {
-        margin-top: 10px;
-    }
-
-    .settings-editor summary {
-        cursor: pointer;
-        font-weight: bolder;
-    }
-
-    .settings-editor-row {
-        display: flex;
-        flex-direction: row;
-        gap: 5px;
-        margin: 5px 0;
-    }
-
-    .settings-editor-row input,
-    .settings-editor-header span {
-        flex-grow: 1;
-        min-width: 0;
-    }
-
     .weekday-row {
         align-items: center;
     }
@@ -113,10 +91,7 @@
         font-style: italic;
     }
 
-    .peak-time-entry:not(:first-child),
-    .price-entry:not(:first-child) {
-        border-top: 1px solid rgba(255,255,255,0.05);
-    }
+
 
     .delete-candidate input,
     .delete-candidate [data-day] {
@@ -126,6 +101,35 @@
     .delete-candidate .weekday-btn.active {
         background-color: rgba(255, 0, 0, 0.50);
     }
+}
+
+.ds-token-usage-popup {
+    .settings-editor {
+        margin-top: 10px;
+    }
+
+    .settings-editor summary {
+        cursor: pointer;
+        font-weight: bolder;
+    }
+
+    .settings-editor-row {
+        display: flex;
+        flex-direction: row;
+        gap: 5px;
+        margin: 5px 0;
+    }
+
+    .settings-editor-row input,
+    .settings-editor-header span {
+        flex-grow: 1;
+        min-width: 0;
+    }
+}
+
+.peak-time-entry:not(:first-child),
+.price-entry:not(:first-child) {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 #ds-token--last_gen_stat {
