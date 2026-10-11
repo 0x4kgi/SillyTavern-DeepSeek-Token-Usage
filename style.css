@@ -90,29 +90,9 @@
         font-weight: bolder;
         font-style: italic;
     }
-
-
-
-    .delete-candidate input,
-    .delete-candidate [data-day] {
-        background-color: rgba(255, 0, 0, 0.30);
-    }
-
-    .delete-candidate .weekday-btn.active {
-        background-color: rgba(255, 0, 0, 0.50);
-    }
 }
 
 .ds-token-usage-popup {
-    .settings-editor {
-        margin-top: 10px;
-    }
-
-    .settings-editor summary {
-        cursor: pointer;
-        font-weight: bolder;
-    }
-
     .settings-editor-row {
         display: flex;
         flex-direction: row;
@@ -124,6 +104,15 @@
     .settings-editor-header span {
         flex-grow: 1;
         min-width: 0;
+    }
+
+    .delete-candidate input,
+    .delete-candidate [data-day] {
+        background-color: rgba(255, 0, 0, 0.30);
+    }
+
+    .delete-candidate .weekday-btn.active {
+        background-color: rgba(255, 0, 0, 0.50);
     }
 }
 
