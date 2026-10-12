@@ -69,27 +69,6 @@
     .bar-seg {
         width: 100%;
     }
-
-    .weekday-row {
-        align-items: center;
-    }
-
-    .weekday-label {
-        flex-grow: 0;
-        min-width: 30px;
-        font-size: smaller;
-    }
-
-    .weekday-btn {
-        flex-grow: 1;
-        min-width: 0;
-        padding: 2px 0;
-    }
-
-    .weekday-btn.active {
-        font-weight: bolder;
-        font-style: italic;
-    }
 }
 
 .ds-token-usage-popup {
@@ -114,12 +93,35 @@
     .delete-candidate .weekday-btn.active {
         background-color: rgba(255, 0, 0, 0.50);
     }
+
+    .peak-time-entry:not(:first-child),
+    .price-entry:not(:first-child) {
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .weekday-row {
+        align-items: center;
+    }
+
+    .weekday-label {
+        flex-grow: 0;
+        min-width: 30px;
+        font-size: smaller;
+    }
+
+    .weekday-btn {
+        flex-grow: 1;
+        min-width: 0;
+        padding: 2px 0;
+    }
+
+    .weekday-btn.active {
+        font-weight: bolder;
+        font-style: italic;
+    }
 }
 
-.peak-time-entry:not(:first-child),
-.price-entry:not(:first-child) {
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
+
 
 #ds-token--last_gen_stat {
     margin: auto;
