@@ -3,7 +3,7 @@ import { DEFAULT_COST } from "./defaults.js";
 import { setDeepseekCost, deepseekCost } from "./globals.js";
 import { panelElemId, buttons, populateModelSelector, renderUIDebounced, htmlStringToElement } from "./html.js";
 import { saveDeepSeekCostToLocalStorageDebounced } from "./storage.js";
-import { debounce, log } from "./utils.js";
+import { log } from "./utils.js";
 
 const modelCostHtml = htmlStringToElement(/*html*/ `
 <div class="ds-token-usage-popup settings-editor">
@@ -28,8 +28,7 @@ export function priceEditorInit() {
 }
 
 async function openModelPricePopup() {
-    const context = SillyTavern.getContext();
-    const { Popup, POPUP_TYPE, POPUP_RESULT } = context;
+    const { Popup, POPUP_TYPE, POPUP_RESULT } = SillyTavern.getContext();
 
     populatePriceEditor();
 
@@ -75,12 +74,11 @@ function savePriceEditor() {
 }
 
 export function populatePriceEditor() {
-    const rowsContainer = priceEditorRows;
-    rowsContainer.innerHTML = "";
+    priceEditorRows.innerHTML = "";
 
     Object.keys(deepseekCost).forEach(modelName => {
         const modelCost = deepseekCost[modelName];
-        rowsContainer.appendChild(createPriceRow(modelName, modelCost));
+        priceEditorRows.appendChild(createPriceRow(modelName, modelCost));
     });
 }
 
@@ -131,10 +129,9 @@ function createPriceInput(type, field, value) {
 }
 
 export function addModelRow() {
-    const rowsContainer = priceEditorRows;
     const entry = createPriceRow("", DEFAULT_COST);
 
-    rowsContainer.appendChild(entry);
+    priceEditorRows.appendChild(entry);
     entry.querySelector("input").focus();
 }
 

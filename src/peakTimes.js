@@ -6,7 +6,7 @@ import { PEAK_WEEKDAY_KEYS, DEFAULT_PEAK_WEEKDAYS } from "./defaults.js";
 import { savePeakTimesToLocalStorageDebounced } from "./storage.js";
 
 const peakTimesHtml = htmlStringToElement(/*html*/ `
-<div class="ds-token-usage-popup  settings-editor">
+<div class="ds-token-usage-popup settings-editor">
     <span>Peak Times (2x cost)</span>
     <hr>
     <div class="settings-editor-row">
@@ -37,8 +37,7 @@ export function peakTimeInit() {
 }
 
 async function openPeakTimesPopup() {
-    const context = SillyTavern.getContext();
-    const { Popup, POPUP_TYPE, POPUP_RESULT } = context;
+    const { Popup, POPUP_TYPE, POPUP_RESULT } = SillyTavern.getContext();
 
     populatePeakTimeEditor();
 
@@ -82,11 +81,10 @@ function savePeakTimeEditor() {
 }
 
 export function populatePeakTimeEditor() {
-    const rowsContainer = peakTimeEditorRows;
-    rowsContainer.innerHTML = "";
+    peakTimeEditorRows.innerHTML = "";
 
     peakTimes.forEach(entry => {
-        rowsContainer.appendChild(createPeakTimeEntry(entry.start, entry.end, entry.weekdays));
+        peakTimeEditorRows.appendChild(createPeakTimeEntry(entry.start, entry.end, entry.weekdays));
     });
 }
 
@@ -150,9 +148,8 @@ function createTimeInput(value, field) {
 }
 
 export function addTimeRow() {
-    const rowsContainer = peakTimeEditorRows;
     const entry = createPeakTimeEntry("", "", DEFAULT_PEAK_WEEKDAYS);
-    rowsContainer.appendChild(entry);
+    peakTimeEditorRows.appendChild(entry);
     entry.querySelector("input").focus();
 }
 
