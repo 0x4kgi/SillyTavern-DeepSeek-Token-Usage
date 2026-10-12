@@ -1,27 +1,63 @@
-import { panelElemId, buttons, renderUIDebounced } from "./html.js";
+import { EXT_PREFIX } from "./constants.js";
+import { panelElemId, buttons, renderUIDebounced, htmlStringToElement } from "./html.js";
 import { peakTimes, setPeakTimes } from "./globals.js";
-import { log, debounce, timeToInt, isTimeTargetBetween } from "./utils.js";
+import { log, timeToInt, isTimeTargetBetween } from "./utils.js";
 import { PEAK_WEEKDAY_KEYS, DEFAULT_PEAK_WEEKDAYS } from "./defaults.js";
 import { savePeakTimesToLocalStorageDebounced } from "./storage.js";
 
-export function peakTimeInit() {
-    populatePeakTimeEditor();
+const peakTimesHtml = htmlStringToElement(/*html*/ `
+<div class="ds-token-usage-popup  settings-editor">
+    <span>Peak Times (2x cost)</span>
+    <hr>
+    <div class="settings-editor-row">
+        <button id="timeInUtcBtn" type="button" class="menu_button menu_button_icon interactable"></button>
+    </div>
+    <div class="settings-editor-row settings-editor-header">
+        <span>Start (UTC)</span>
+        <span>End (UTC)</span>
+    </div>
+    <div id="peakTimeEditorRows"></div>
+    <button id="addPeakTimeBtn" type="button" class="menu_button menu_button_icon interactable">+ Add Time</button>
+</div>
+`);
+const timeInUtcBtn = peakTimesHtml.querySelector(`#${EXT_PREFIX}timeInUtcBtn`);
+const peakTimeEditorRows = peakTimesHtml.querySelector(`#${EXT_PREFIX}peakTimeEditorRows`);
+const addPeakTimeBtn = peakTimesHtml.querySelector(`#${EXT_PREFIX}addPeakTimeBtn`);
 
-    panelElemId("peakTimeEditorRows").addEventListener("input", savePeakTimeEditorDebounced);
-    panelElemId("peakTimeEditorRows").addEventListener("click", onPeakTimeEditorClick);
-    panelElemId("peakTimeEditorRows").addEventListener("click", deleteTimeRow);
-    panelElemId("timeInUtcBtn").addEventListener("click", updatePeakTimeIndicators);
-    panelElemId("addPeakTimeBtn").addEventListener("click", addTimeRow);
+export function peakTimeInit() {
+    peakTimeEditorRows.addEventListener("click", onPeakTimeEditorClick);
+    peakTimeEditorRows.addEventListener("click", deleteTimeRow);
+    timeInUtcBtn.addEventListener("click", updatePeakTimeIndicators);
+    addPeakTimeBtn.addEventListener("click", addTimeRow);
 
     updatePeakTimeIndicators();
     setInterval(updatePeakTimeIndicators, 30000);
+
+    panelElemId("open-peak-times-popup").addEventListener("click", openPeakTimesPopup);
 }
 
-export const savePeakTimeEditorDebounced = debounce(savePeakTimeEditor, 300);
+async function openPeakTimesPopup() {
+    const context = SillyTavern.getContext();
+    const { Popup, POPUP_TYPE, POPUP_RESULT } = context;
+
+    populatePeakTimeEditor();
+
+    const popup = new Popup(peakTimesHtml, POPUP_TYPE.TEXT, '', {
+        okButton: "Save",
+        cancelButton: "Cancel",
+        allowVerticalScrolling: true,
+    });
+    const result = await popup.show();
+
+    if (result === POPUP_RESULT.AFFIRMATIVE) {
+        savePeakTimeEditor();
+    }
+}
+
 function savePeakTimeEditor() {
     log("Saving peak time editor values.");
 
-    const entries = panelElemId("peakTimeEditorRows").querySelectorAll(".peak-time-entry");
+    const entries = peakTimeEditorRows.querySelectorAll(".peak-time-entry");
     const newTimes = [];
 
     entries.forEach(entry => {
@@ -46,7 +82,7 @@ function savePeakTimeEditor() {
 }
 
 export function populatePeakTimeEditor() {
-    const rowsContainer = panelElemId("peakTimeEditorRows");
+    const rowsContainer = peakTimeEditorRows;
     rowsContainer.innerHTML = "";
 
     peakTimes.forEach(entry => {
@@ -114,7 +150,7 @@ function createTimeInput(value, field) {
 }
 
 export function addTimeRow() {
-    const rowsContainer = panelElemId("peakTimeEditorRows");
+    const rowsContainer = peakTimeEditorRows;
     const entry = createPeakTimeEntry("", "", DEFAULT_PEAK_WEEKDAYS);
     rowsContainer.appendChild(entry);
     entry.querySelector("input").focus();
@@ -150,8 +186,6 @@ function deleteTimeRow(event) {
 
     confirmButton.onclick = () => {
         timeRow.parentElement.removeChild(timeRow);
-        savePeakTimeEditor();
-        populatePeakTimeEditor();
     };
 
     button.innerHTML = buttons.recycle.innerHTML;
@@ -164,8 +198,6 @@ export function onPeakTimeEditorClick(event) {
     if (button) {
         button.classList.toggle("active");
     }
-
-    savePeakTimeEditorDebounced();
 }
 
 export function updatePeakTimeIndicators() {
@@ -198,7 +230,7 @@ function showCurrentUTCTime(activePeakHours) {
         msg = `[ ${formattedTime} ] Click to refresh time.`;
     }
 
-    panelElemId("timeInUtcBtn").innerHTML = msg;
+    timeInUtcBtn.innerHTML = msg;
 }
 
 export function getActivatedPeakHours() {
