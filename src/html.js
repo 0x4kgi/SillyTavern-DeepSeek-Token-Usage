@@ -9,17 +9,17 @@ import {
 const buttons = {
     delete: {
         innerHTML: `<span class="fa-solid fa-trash"></span>`,
-        className: "delete menu_button interactable",
+        className: "ds-delete menu_button interactable",
         color: "red",
     },
     finalDelete: {
         innerHTML: `<span class="fa-solid fa-trash"></span>`,
-        className: "delete-confirm menu_button interactable",
+        className: "ds-delete-confirm menu_button interactable",
         color: "red",
     },
     recycle: {
         innerHTML: `<span class="fa-solid fa-recycle"></span>`,
-        className: "delete menu_button interactable",
+        className: "ds-delete menu_button interactable",
         color: "white",
     },
 };
@@ -277,15 +277,15 @@ export function editorDeleteButton() {
     return deleteButton;
 }
 
-export function onEditorDeleteClick(button, rowSelector) {
+export function handleEditorDeleteClick(button, rowSelector) {
     /** @type {HTMLElement} */
     const editorRow = button.closest(rowSelector);
 
     // Delete confirmation
     // Revert back to pre-delete confirmation phase and exit
-    if (editorRow.classList.contains("delete-candidate")) {
-        editorRow.classList.remove("delete-candidate");
-        const cb = editorRow.querySelector(".delete-confirm");
+    if (editorRow.classList.contains("ds-delete-candidate")) {
+        editorRow.classList.remove("ds-delete-candidate");
+        const cb = editorRow.querySelector(".ds-delete-confirm");
         if (cb) cb.parentElement.removeChild(cb);
 
         button.innerHTML = buttons.delete.innerHTML;
@@ -295,7 +295,7 @@ export function onEditorDeleteClick(button, rowSelector) {
     }
 
     // Delete staging
-    editorRow.classList.add("delete-candidate");
+    editorRow.classList.add("ds-delete-candidate");
 
     const confirmButton = document.createElement("button");
     confirmButton.innerHTML = buttons.finalDelete.innerHTML;

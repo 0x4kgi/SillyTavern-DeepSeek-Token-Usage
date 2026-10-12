@@ -1,5 +1,5 @@
 import { EXT_PREFIX } from "./constants.js";
-import { panelElemId, renderUIDebounced, htmlStringToElement, editorDeleteButton, onEditorDeleteClick } from "./html.js";
+import { panelElemId, renderUIDebounced, htmlStringToElement, editorDeleteButton, handleEditorDeleteClick } from "./html.js";
 import { peakTimes, setPeakTimes } from "./globals.js";
 import { log, timeToInt, isTimeTargetBetween } from "./utils.js";
 import { PEAK_WEEKDAY_KEYS, DEFAULT_PEAK_WEEKDAYS } from "./defaults.js";
@@ -153,10 +153,10 @@ export function addTimeRow() {
 /** @param {Event} event */
 function deleteTimeRow(event) {
     /** @type {HTMLButtonElement} */
-    const button = event.target.closest(".delete");
+    const button = event.target.closest(".ds-delete");
     if (!button) return;
 
-    onEditorDeleteClick(button, "[data-time-id]");
+    handleEditorDeleteClick(button, "[data-time-id]");
 }
 
 export function onPeakTimeEditorClick(event) {

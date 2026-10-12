@@ -1,7 +1,7 @@
 import { EXT_PREFIX } from "./constants.js";
 import { DEFAULT_COST } from "./defaults.js";
 import { setDeepseekCost, deepseekCost } from "./globals.js";
-import { panelElemId, populateModelSelector, renderUIDebounced, htmlStringToElement, editorDeleteButton, onEditorDeleteClick } from "./html.js";
+import { panelElemId, populateModelSelector, renderUIDebounced, htmlStringToElement, editorDeleteButton, handleEditorDeleteClick } from "./html.js";
 import { saveDeepSeekCostToLocalStorageDebounced } from "./storage.js";
 import { log } from "./utils.js";
 
@@ -135,8 +135,8 @@ export function addModelRow() {
 /** @param {Event} event*/
 function deleteModelRow(event) {
     /** @type {HTMLButtonElement} */
-    const button = event.target.closest(".delete");
+    const button = event.target.closest(".ds-delete");
     if (!button) return;
 
-    onEditorDeleteClick(button, "[data-model]");
+    handleEditorDeleteClick(button, "[data-model]");
 }
