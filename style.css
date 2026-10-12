@@ -89,13 +89,13 @@
         min-width: 0;
     }
 
-    .delete-candidate input,
-    .delete-candidate [data-day] {
+    .ds-delete-candidate input,
+    .ds-delete-candidate [data-day] {
         background-color: rgba(255, 0, 0, 0.30);
     }
 
-    .delete-candidate .weekday-btn.active {
-        background-color: rgba(255, 0, 0, 0.50);
+    .ds-delete-candidate .weekday-btn.active {
+        background-color: rgba(255, 0, 0, 0.50) !important;
     }
 
     .peak-time-entry:not(:first-child),
