@@ -6,20 +6,20 @@ import {
     Usage, accumulatedUsage, deepseekCost
 } from "./globals.js";
 
-export const buttons = {
+const buttons = {
     delete: {
         innerHTML: `<span class="fa-solid fa-trash"></span>`,
-        className: "-delete menu_button interactable",
+        className: "delete menu_button interactable",
         color: "red",
     },
     finalDelete: {
         innerHTML: `<span class="fa-solid fa-trash"></span>`,
-        className: "-delete-confirm menu_button interactable",
+        className: "delete-confirm menu_button interactable",
         color: "red",
     },
     recycle: {
         innerHTML: `<span class="fa-solid fa-recycle"></span>`,
-        className: "-delete menu_button interactable",
+        className: "delete menu_button interactable",
         color: "white",
     },
 };
@@ -266,4 +266,47 @@ export function populateModelSelector() {
 
 export function modelDropdownChange() {
     renderUIDebounced();
+}
+
+export function editorDeleteButton() {
+    const deleteButton = document.createElement("button");
+    deleteButton.innerHTML = buttons.delete.innerHTML;
+    deleteButton.className = buttons.delete.className;
+    deleteButton.style.color = buttons.delete.color;
+
+    return deleteButton;
+}
+
+export function onEditorDeleteClick(button, rowSelector) {
+    /** @type {HTMLElement} */
+    const editorRow = button.closest(rowSelector);
+
+    // Delete confirmation
+    // Revert back to pre-delete confirmation phase and exit
+    if (editorRow.classList.contains("delete-candidate")) {
+        editorRow.classList.remove("delete-candidate");
+        const cb = editorRow.querySelector(".delete-confirm");
+        if (cb) cb.parentElement.removeChild(cb);
+
+        button.innerHTML = buttons.delete.innerHTML;
+        button.style.color = buttons.delete.color;
+
+        return;
+    }
+
+    // Delete staging
+    editorRow.classList.add("delete-candidate");
+
+    const confirmButton = document.createElement("button");
+    confirmButton.innerHTML = buttons.finalDelete.innerHTML;
+    confirmButton.className = buttons.finalDelete.className;
+    confirmButton.style.color = buttons.finalDelete.color;
+
+    confirmButton.onclick = () => {
+        editorRow.parentElement.removeChild(editorRow);
+    };
+
+    button.innerHTML = buttons.recycle.innerHTML;
+    button.style.color = buttons.recycle.color;
+    button.parentElement.insertBefore(confirmButton, button);
 }
