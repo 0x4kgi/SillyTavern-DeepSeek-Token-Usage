@@ -26,6 +26,10 @@
         flex-direction: row;
     }
 
+    .row.gap {
+        gap: 2px;
+    }
+
     .row.center {
         text-align: center;
     }
